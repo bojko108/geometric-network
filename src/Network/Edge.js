@@ -7,6 +7,10 @@ export default class Edge {
     this.updateCoordinates(coordinates);
   }
 
+  get type() {
+    return 'line';
+  }
+
   updateCoordinates(coordinates) {
     this.coordinates = coordinates;
     this._vertexCount = this.coordinates.length;

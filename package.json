@@ -1,6 +1,6 @@
 {
   "name": "geometric-network",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Library for creating and managing geometric networks",
   "author": "bojko108 <bojko108@gmail.com>",
   "license": "MIT",

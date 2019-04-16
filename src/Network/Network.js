@@ -38,13 +38,62 @@ export default class Network {
     return this._edgesTree.all().filter(edge => edge.id === id)[0];
   }
 
-  findEdges(coordinates) {
-    const node = new Node(coordinates);
+  findEdgesAt(coordinates) {
+    const node = coordinates instanceof Node ? coordinates : new Node(coordinates);
     return this._edgesTree.search(node);
   }
 
+  findEdgesIn(bbox) {
+    return this._edgesTree.search(bbox);
+  }
+
   addEdge(coordinates) {
+    debugger;
     let edge = new Edge(++this._edgesIndex, coordinates);
+
+    // const edgesOnStart = this.findEdgesAt(edge.start);
+    // // split edges on start vertex
+    // edgesOnStart.map(edgeOnStart => {
+    //   console.log(`check: ${edge.id} with: ${edgeOnStart.id}`);
+    //   if (
+    //     coordinatesAreEqual(edgeOnStart.start.coordinates, edge.start.coordinates) ||
+    //     coordinatesAreEqual(edgeOnStart.end.coordinates, edge.start.coordinates)
+    //   ) {
+    //     console.log('start node match existing edge');
+    //   } else {
+    //     if (
+    //       coordinatesAreEqual(edgeOnStart.start.coordinates, edge.end.coordinates) ||
+    //       coordinatesAreEqual(edgeOnStart.end.coordinates, edge.end.coordinates)
+    //     ) {
+    //       console.log('end node match existing edge');
+    //     } else {
+    //       console.log('check for split edge');
+    //       // split edgeOnStart by edge.end
+    //     }
+    //   }
+    // });
+
+    // const edgesOnEnd = this.findEdgesAt(edge.end);
+    // // split edges on end vertex
+    // edgesOnEnd.map(edgeOnEnd => {
+    //   console.log(`check: ${edge.id} with: ${edgeOnEnd.id}`);
+    //   if (
+    //     coordinatesAreEqual(edgeOnEnd.start.coordinates, edge.start.coordinates) ||
+    //     coordinatesAreEqual(edgeOnEnd.end.coordinates, edge.start.coordinates)
+    //   ) {
+    //     console.log('start node match existing edge');
+    //   } else {
+    //     if (
+    //       coordinatesAreEqual(edgeOnEnd.start.coordinates, edge.end.coordinates) ||
+    //       coordinatesAreEqual(edgeOnEnd.end.coordinates, edge.end.coordinates)
+    //     ) {
+    //       console.log('end node match existing edge');
+    //     } else {
+    //       console.log('check for split edge');
+    //     }
+    //   }
+    // });
+
     this._edgesTree.insert(edge);
 
     this.events.emit(events.ADD_EDGE, edge);
@@ -65,7 +114,7 @@ export default class Network {
   }
 
   removeEdges(coordinates) {
-    const edges = this.findEdges(coordinates);
+    const edges = this.findEdgesAt(coordinates);
     for (let i = 0; i < edges.length; i++) {
       this.removeEdge(edges[i]);
     }

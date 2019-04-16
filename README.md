@@ -1,6 +1,6 @@
-# Geometric Network
+# Geometric Network - beta
 
-Library for creating and managing geometric networks
+Library for creating and managing geometric networks.
 
 ## Install
 

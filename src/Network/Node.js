@@ -8,6 +8,10 @@ export default class Node {
     this.maxY = this.coordinates[1];
   }
 
+  get type() {
+    return 'point';
+  }
+
   get x() {
     return this.coordinates[0];
   }

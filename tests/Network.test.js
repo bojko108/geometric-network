@@ -40,7 +40,20 @@ describe('Network tests', () => {
   it('Should get all edges at specified coordinates', () => {
     const edges = data.features.map(f => f.geometry.coordinates);
     const network = new Network(edges, 16);
-    const result = network.findEdges([23.952725740113618, 42.167194704030642]);
+    const result = network.findEdgesAt([23.930630390468483, 42.146729339195396]);
+
+    assert.isArray(result);
+    assert.equal(result.length, 2);
+    for (let i = 0; i < result.length; i++) {
+      assert.isTrue(result[i] instanceof Edge);
+    }
+  });
+
+  it('Should get all edges intersecting bbox', () => {
+    const edges = data.features.map(f => f.geometry.coordinates);
+    const network = new Network(edges, 16);
+    const result = network.findEdgesIn({ minX: 23.9467, minY: 42.1637, maxX: 23.9595, maxY: 42.172 });
+
     assert.isArray(result);
     assert.equal(result.length, 3);
     for (let i = 0; i < result.length; i++) {
@@ -82,7 +95,7 @@ describe('Network tests', () => {
     const edges = data.features.map(f => f.geometry.coordinates);
     const network = new Network(edges, 16);
     const coords = [23.952725740113618, 42.167194704030642];
-    const foundEdges = network.findEdges(coords);
+    const foundEdges = network.findEdgesAt(coords);
     network.removeEdges(coords);
     assert.equal(network.all().length, edges.length - foundEdges.length);
   });

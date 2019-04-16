@@ -15,6 +15,7 @@ describe('Edge tests', () => {
 
     assert.isDefined(edge);
     assert.equal(edge.id, id);
+    assert.equal(edge.type, 'line');
     assert.equal(edge.coordinates.length, coordinates.length);
     assert.equal(edge.maxX, maxX);
     assert.equal(edge.minX, minX);
