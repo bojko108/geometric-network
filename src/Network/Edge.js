@@ -1,0 +1,25 @@
+import Node from './Node';
+
+export default class Edge {
+  constructor(id, coordinates) {
+    this.id = id;
+
+    this.updateCoordinates(coordinates);
+  }
+
+  updateCoordinates(coordinates) {
+    this.coordinates = coordinates;
+    this._vertexCount = this.coordinates.length;
+
+    this.start = new Node(this.coordinates[0]);
+    this.end = new Node(this.coordinates[this._vertexCount - 1]);
+
+    const xs = this.coordinates.map(c => c[0]);
+    const ys = this.coordinates.map(c => c[1]);
+
+    this.minX = Math.min(...xs);
+    this.minY = Math.min(...ys);
+    this.maxX = Math.max(...xs);
+    this.maxY = Math.max(...ys);
+  }
+}
