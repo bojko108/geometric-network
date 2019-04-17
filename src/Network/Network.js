@@ -44,7 +44,8 @@ export default class Network {
   }
 
   findEdgesIn(bbox) {
-    return this._edgesTree.search(bbox);
+    const searchBox = Array.isArray(bbox) ? { minX: bbox[0], minY: bbox[1], maxX: bbox[2], maxY: bbox[3] } : bbox;
+    return this._edgesTree.search(searchBox);
   }
 
   addEdge(coordinates) {
@@ -140,7 +141,7 @@ export default class Network {
 
   _onUpdateEdge(oldEdge, newEdge) {
     // move all connected edges as well
-    
+
     this._checkForIntersectionWithOtherEdges(newEdge);
   }
 
