@@ -18,7 +18,39 @@ export const isOnSegment = (segment, point) => {
   const sqDistToStart = distance(segment[0], point);
   const sqDistToEnd = distance(segment[1], point);
   const d = sqDistToStart + sqDistToEnd;
-  return sqLength === d;
+  return Math.abs(sqLength - (sqDistToStart + sqDistToEnd)) < Number.EPSILON;
+};
+
+export const split = (lineCoordinates, point) => {
+  if (coordinatesAreEqual(point, lineCoordinates[0])) {
+    return;
+  }
+  if (coordinatesAreEqual(point, lineCoordinates[lineCoordinates.length - 1])) {
+    return;
+  }
+
+  let intersects = false;
+  let splitIndex;
+
+  for (let i = 0; i < lineCoordinates.length - 1; i++) {
+    if (isOnSegment([lineCoordinates[i], lineCoordinates[i + 1]], point)) {
+      splitIndex = i + 1;
+      intersects = true;
+      break;
+    }
+  }
+
+  if (intersects) {
+    let firstCoordinates = lineCoordinates.slice(0, splitIndex);
+    firstCoordinates.push(point);
+    let secondCoordinates = [];
+    if (coordinatesAreEqual(point, lineCoordinates[splitIndex]) === false) {
+      secondCoordinates.push(point);
+    }
+    secondCoordinates.push(...lineCoordinates.slice(splitIndex));
+
+    return { splitIndex: splitIndex, firstCoordinates, secondCoordinates };
+  }
 };
 
 // export const isOnSegment = (segment, point) => {

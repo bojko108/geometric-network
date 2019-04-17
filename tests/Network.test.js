@@ -114,6 +114,19 @@ describe('Network tests', () => {
     assert.isTrue(network.removeEdge({}));
   });
 
+  it(`Should split existing edge at intersection point`, () => {
+    const edges = data.features.map(f => f.geometry.coordinates);
+    const network = new Network(edges, 16);
+    assert.equal(network.all().length, edges.length);
+    network.updateEdge(3, [
+      [23.959789007623126, 42.143288260152296],
+      [23.942764721830976, 42.133689460716298],
+      [23.9246537794989, 42.131153928789807],
+      [23.907913863294088, 42.1443011801952]
+    ]);
+    assert.equal(network.all().length, edges.length + 1);
+  });
+
   it('Should save the network in GeoJSON format', () => {
     const edges = data.features.map(f => f.geometry.coordinates);
 
