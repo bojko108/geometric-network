@@ -127,6 +127,47 @@ describe('Network tests', () => {
     assert.equal(network.all().length, edges.length + 1);
   });
 
+  it(`Should update all connected edges`, () => {
+    debugger;
+    const edges = data.features.map(f => f.geometry.coordinates);
+    const network = new Network(edges, 16);
+    assert.equal(network.all().length, edges.length);
+    const movePoint = [23.95213, 42.17279];
+    network.updateEdge(5, [[23.990385361315976, 42.18143922833228], movePoint]);
+    assert.equal(network.all().length, edges.length);
+
+    // edges 4 and 2 are updated as they are connected
+    const edge2 = network.getEdge(2);
+    const edge4 = network.getEdge(4);
+    const edge5 = network.getEdge(5);
+    assert.deepEqual(movePoint, edge2.start.coordinates);
+    assert.deepEqual(movePoint, edge4.end.coordinates);
+    assert.deepEqual(movePoint, edge5.end.coordinates);
+  });
+
+  it(`Should update all connected edges + split an existing edge`, () => {
+    debugger;
+    const edges = data.features.map(f => f.geometry.coordinates);
+    const network = new Network(edges, 16);
+    assert.equal(network.all().length, edges.length);
+    const movePoint = [23.95168102709, 42.13871673917];
+    network.updateEdge(5, [[23.990385361315976, 42.18143922833228], movePoint]);
+    assert.equal(network.all().length, edges.length + 1);
+
+    // edge 3 is splitted to 3 and 6
+    // edges 4 and 2 are updated as they are connected
+    const edge2 = network.getEdge(2);
+    const edge3 = network.getEdge(3);
+    const edge4 = network.getEdge(4);
+    const edge5 = network.getEdge(5);
+    const edge6 = network.getEdge(6);
+    assert.deepEqual(movePoint, edge2.start.coordinates);
+    assert.deepEqual(movePoint, edge3.end.coordinates);
+    assert.deepEqual(movePoint, edge4.end.coordinates);
+    assert.deepEqual(movePoint, edge5.end.coordinates);
+    assert.deepEqual(movePoint, edge6.start.coordinates);
+  });
+
   it('Should save the network in GeoJSON format', () => {
     const edges = data.features.map(f => f.geometry.coordinates);
 

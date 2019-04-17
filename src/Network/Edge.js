@@ -13,13 +13,23 @@ export default class Edge {
 
   updateCoordinates(coordinates) {
     this.coordinates = coordinates;
-    this._vertexCount = this.coordinates.length;
+    this.vertexCount = this.coordinates.length;
 
     this.start = new Node(this.coordinates[0]);
-    this.end = new Node(this.coordinates[this._vertexCount - 1]);
+    this.end = new Node(this.coordinates[this.vertexCount - 1]);
 
     this._calculateBounds();
   }
+
+  // setStart(node) {
+  //   this.start = node;
+  //   this._calculateBounds();
+  // }
+
+  // setEnd(node) {
+  //   this.end = node;
+  //   this._calculateBounds();
+  // }
 
   clone() {
     return new Edge(this.id, [...this.coordinates]);
