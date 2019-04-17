@@ -28,4 +28,21 @@ describe('Edge tests', () => {
     assert.deepEqual(edge.end.x, coordinates[coordinates.length - 1][0]);
     assert.deepEqual(edge.end.y, coordinates[coordinates.length - 1][1]);
   });
+
+  it('Should clone an edge', () => {
+    const id = 1;
+    const coordinates = data.features[0].geometry.coordinates;
+    const newCoordinates = [[0, 0], [1, 1]];
+
+    const edge = new Edge(id, coordinates);
+    const cloned = edge.clone();
+
+    assert.isDefined(cloned);
+
+    cloned.updateCoordinates(newCoordinates);
+
+    assert.equal(cloned.id, edge.id);
+    assert.deepEqual(edge.coordinates, coordinates);
+    assert.deepEqual(cloned.coordinates, newCoordinates);
+  });
 });

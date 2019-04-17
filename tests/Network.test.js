@@ -21,6 +21,8 @@ describe('Network tests', () => {
     const network = new Network(edges, 16);
     const elements = network.all();
     assert.isArray(elements);
+
+    // no splits are made while the network is created
     assert.equal(elements.length, edges.length);
   });
 
@@ -49,10 +51,22 @@ describe('Network tests', () => {
     }
   });
 
-  it('Should get all edges intersecting bbox', () => {
+  it('Should get all edges intersecting bbox defined as object', () => {
     const edges = data.features.map(f => f.geometry.coordinates);
     const network = new Network(edges, 16);
     const result = network.findEdgesIn({ minX: 23.9467, minY: 42.1637, maxX: 23.9595, maxY: 42.172 });
+
+    assert.isArray(result);
+    assert.equal(result.length, 3);
+    for (let i = 0; i < result.length; i++) {
+      assert.isTrue(result[i] instanceof Edge);
+    }
+  });
+
+  it('Should get all edges intersecting bbox defined as array', () => {
+    const edges = data.features.map(f => f.geometry.coordinates);
+    const network = new Network(edges, 16);
+    const result = network.findEdgesIn([23.9467, 42.1637, 23.9595, 42.172]);
 
     assert.isArray(result);
     assert.equal(result.length, 3);
@@ -114,11 +128,86 @@ describe('Network tests', () => {
     assert.isTrue(network.removeEdge({}));
   });
 
+  it(`Should split existing edge at intersection point`, () => {
+    const edges = data.features.map(f => f.geometry.coordinates);
+    const network = new Network(edges, 16);
+    assert.equal(network.all().length, edges.length);
+    network.updateEdge(3, [
+      [23.959789007623126, 42.143288260152296],
+      [23.942764721830976, 42.133689460716298],
+      [23.9246537794989, 42.131153928789807],
+      [23.907913863294088, 42.1443011801952]
+    ]);
+    assert.equal(network.all().length, edges.length + 1);
+  });
+
+  it(`Should update all connected edges`, () => {
+    debugger;
+    const edges = data.features.map(f => f.geometry.coordinates);
+    const network = new Network(edges, 16);
+    assert.equal(network.all().length, edges.length);
+    const movePoint = [23.95213, 42.17279];
+    network.updateEdge(5, [[23.990385361315976, 42.18143922833228], movePoint]);
+    assert.equal(network.all().length, edges.length);
+
+    // edges 4 and 2 are updated as they are connected
+    const edge2 = network.getEdge(2);
+    const edge4 = network.getEdge(4);
+    const edge5 = network.getEdge(5);
+    assert.deepEqual(movePoint, edge2.start.coordinates);
+    assert.deepEqual(movePoint, edge4.end.coordinates);
+    assert.deepEqual(movePoint, edge5.end.coordinates);
+  });
+
+  it(`Should update all connected edges + split an existing edge`, () => {
+    debugger;
+    const edges = data.features.map(f => f.geometry.coordinates);
+    const network = new Network(edges, 16);
+    assert.equal(network.all().length, edges.length);
+    const movePoint = [23.95168102709, 42.13871673917];
+    network.updateEdge(5, [[23.990385361315976, 42.18143922833228], movePoint]);
+    assert.equal(network.all().length, edges.length + 1);
+
+    // edge 3 is splitted to 3 and 6
+    // edges 4 and 2 are updated as they are connected
+    const edge2 = network.getEdge(2);
+    const edge3 = network.getEdge(3);
+    const edge4 = network.getEdge(4);
+    const edge5 = network.getEdge(5);
+    const edge6 = network.getEdge(6);
+    assert.deepEqual(movePoint, edge2.start.coordinates);
+    assert.deepEqual(movePoint, edge3.end.coordinates);
+    assert.deepEqual(movePoint, edge4.end.coordinates);
+    assert.deepEqual(movePoint, edge5.end.coordinates);
+    assert.deepEqual(movePoint, edge6.start.coordinates);
+  });
+
   it('Should save the network in GeoJSON format', () => {
     const edges = data.features.map(f => f.geometry.coordinates);
 
     const network = new Network(edges, 16);
     const json = network.toGeoJSON();
     assert.isDefined(json);
+  });
+
+  it('Should throw error when updating non existing edge', () => {
+    const network = new Network(null, 16);
+    assert.throws(() => {
+      network.updateEdge(1, []);
+    }, 'InvalidArgument: edge with ID: 1 was not found in the network');
+  });
+
+  it('Should throw error when removing non existing edge', () => {
+    const network = new Network(null, 16);
+    assert.throws(() => {
+      network.removeEdgeById(1);
+    }, 'InvalidArgument: edge with ID: 1 was not found in the network');
+  });
+
+  it('Should throw error when bbox is invalid', () => {
+    const network = new Network(null, 16);
+    assert.throws(() => {
+      network.findEdgesIn([23.9467]);
+    }, 'InvalidArgument: bbox must be defined as - [minX, minY, maxX, maxY]');
   });
 });

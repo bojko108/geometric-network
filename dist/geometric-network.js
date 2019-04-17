@@ -1,5 +1,5 @@
 /** 
- * geometric-network - v1.0.2
+ * geometric-network - v1.1.0
  * description: Library for creating and managing geometric networks
  * author: bojko108 <bojko108@gmail.com>
  * 
@@ -472,8 +472,7 @@ function isOnSegment(segment, point) {
   var sqLength = distance(segment[0], segment[1]);
   var sqDistToStart = distance(segment[0], point);
   var sqDistToEnd = distance(segment[1], point);
-  var d = sqDistToStart + sqDistToEnd;
-  return sqLength === d;
+  return Math.abs(sqLength - (sqDistToStart + sqDistToEnd)) < Number.EPSILON;
 }
 function intersectsLine(node, line) {
   for (var i = 0; i < line.coordinates.length - 1; i++) {
@@ -508,13 +507,55 @@ function multiSelect(arr, left, right, n, compare) {
 }
 rbush_1.default = default_1;
 
+const coordinatesAreEqual = (a, b) => {
+  return a[0] === b[0] && a[1] === b[1];
+};
+const squaredDistance = (p1, p2) => {
+  const dy = p2[0] - p1[0];
+  const dx = p2[1] - p1[1];
+  return dx * dx + dy * dy;
+};
+const distance$1 = (p1, p2) => {
+  const sqDist = squaredDistance(p1, p2);
+  return Math.sqrt(sqDist);
+};
+const isOnSegment$1 = (segment, point) => {
+  const sqLength = distance$1(segment[0], segment[1]);
+  const sqDistToStart = distance$1(segment[0], point);
+  const sqDistToEnd = distance$1(segment[1], point);
+  return Math.abs(sqLength - (sqDistToStart + sqDistToEnd)) < Number.EPSILON;
+};
+const split = (lineCoordinates, point) => {
+  if (coordinatesAreEqual(point, lineCoordinates[0])) {
+    return;
+  }
+  if (coordinatesAreEqual(point, lineCoordinates[lineCoordinates.length - 1])) {
+    return;
+  }
+  let intersects = false;
+  let splitIndex;
+  for (let i = 0; i < lineCoordinates.length - 1; i++) {
+    if (isOnSegment$1([lineCoordinates[i], lineCoordinates[i + 1]], point)) {
+      splitIndex = i + 1;
+      intersects = true;
+      break;
+    }
+  }
+  if (intersects) {
+    let firstCoordinates = lineCoordinates.slice(0, splitIndex);
+    firstCoordinates.push(point);
+    let secondCoordinates = [];
+    if (coordinatesAreEqual(point, lineCoordinates[splitIndex]) === false) {
+      secondCoordinates.push(point);
+    }
+    secondCoordinates.push(...lineCoordinates.slice(splitIndex));
+    return { splitIndex: splitIndex, firstCoordinates, secondCoordinates };
+  }
+};
+
 class Node {
   constructor(coordinates) {
-    this.coordinates = coordinates;
-    this.minX = this.coordinates[0];
-    this.minY = this.coordinates[1];
-    this.maxX = this.coordinates[0];
-    this.maxY = this.coordinates[1];
+    this.updateCoordinates(coordinates);
   }
   get type() {
     return 'point';
@@ -524,6 +565,19 @@ class Node {
   }
   get y() {
     return this.coordinates[1];
+  }
+  updateCoordinates(coordinates) {
+    this.coordinates = [...coordinates];
+    this._calculateBounds();
+  }
+  clone() {
+    return new Node([...this.coordinates]);
+  }
+  _calculateBounds() {
+    this.minX = this.coordinates[0];
+    this.minY = this.coordinates[1];
+    this.maxX = this.coordinates[0];
+    this.maxY = this.coordinates[1];
   }
 }
 
@@ -536,10 +590,16 @@ class Edge {
     return 'line';
   }
   updateCoordinates(coordinates) {
-    this.coordinates = coordinates;
-    this._vertexCount = this.coordinates.length;
+    this.coordinates = [...coordinates];
+    this.vertexCount = this.coordinates.length;
     this.start = new Node(this.coordinates[0]);
-    this.end = new Node(this.coordinates[this._vertexCount - 1]);
+    this.end = new Node(this.coordinates[this.vertexCount - 1]);
+    this._calculateBounds();
+  }
+  clone() {
+    return new Edge(this.id, this.coordinates);
+  }
+  _calculateBounds() {
     const xs = this.coordinates.map(c => c[0]);
     const ys = this.coordinates.map(c => c[1]);
     this.minX = Math.min(...xs);
@@ -611,10 +671,6 @@ class Network {
     this._edgesTree = new rbush_1(maxEntries);
     this._edgesIndex = 0;
     this.events = new EventEmitter();
-    this.events.on(ADD_EDGE, this._onAddEdge);
-    this.events.on(REMOVE_EDGE, this._onRemoveEdge);
-    this.events.on(UPDATE_EDGE, this._onUpdateEdge);
-    this.events.on(SPLIT_EDGE, this._onSplitEdge);
     if (edges) {
       for (let i = 0; i < edges.length; i++) {
         this.addEdge(edges[i]);
@@ -638,23 +694,38 @@ class Network {
     return this._edgesTree.search(node);
   }
   findEdgesIn(bbox) {
-    return this._edgesTree.search(bbox);
+    let searchBox = {};
+    if (Array.isArray(bbox)) {
+      if (bbox.length !== 4) {
+        throw 'InvalidArgument: bbox must be defined as - [minX, minY, maxX, maxY]';
+      }
+      searchBox.minX = bbox[0];
+      searchBox.minY = bbox[1];
+      searchBox.maxX = bbox[2];
+      searchBox.maxY = bbox[3];
+    } else {
+      searchBox = bbox;
+    }
+    return this._edgesTree.search(searchBox);
   }
   addEdge(coordinates) {
-    debugger;
-    let edge = new Edge(++this._edgesIndex, coordinates);
+    const edge = new Edge(++this._edgesIndex, coordinates);
     this._edgesTree.insert(edge);
+    this._checkForIntersectionWithOtherEdges(edge);
     this.events.emit(ADD_EDGE, edge);
+    return edge;
   }
   updateEdge(id, coordinates) {
     const oldEdge = this.getEdge(id);
     if (!oldEdge) {
-      throw `Edge with ID: ${id} was not found in the network`;
+      throw `InvalidArgument: edge with ID: ${id} was not found in the network`;
     }
     this._edgesTree.remove(oldEdge);
     const updEdge = new Edge(oldEdge.id, coordinates);
     this._edgesTree.insert(updEdge);
+    this._checkForIntersectionWithOtherEdges(updEdge, oldEdge);
     this.events.emit(UPDATE_EDGE, oldEdge, updEdge);
+    return updEdge;
   }
   removeEdges(coordinates) {
     const edges = this.findEdgesAt(coordinates);
@@ -670,7 +741,7 @@ class Network {
   removeEdgeById(id) {
     const edge = this.getEdge(id);
     if (!edge) {
-      throw `Edge with ID: ${id} was not found in the network`;
+      throw `InvalidArgument: edge with ID: ${id} was not found in the network`;
     }
     if (this.removeEdge(edge)) {
       this.events.emit(REMOVE_EDGE, edge);
@@ -688,6 +759,7 @@ class Network {
       let text = `
 {
   "type": "Feature",
+  "id": ${edges[i].id},
   "geometry": {
     "type": "LineString",
     "coordinates": [
@@ -695,7 +767,6 @@ class Network {
     ]
   },
   "properties": {
-    "id": ${edges[i].id},
     "minX": ${edges[i].minX},
     "minY": ${edges[i].minY},
     "maxX": ${edges[i].maxX},
@@ -712,13 +783,64 @@ class Network {
   "features": [${features.join(',')}]
 }`;
   }
-  _onAddEdge(edge) {}
-  _onRemoveEdge(edge) {}
-  _onUpdateEdge(oldEdge, newEdge) {
-  }
-  _onSplitEdge(oldEdge, newEdge) {}
   _equalityFunction(a, b) {
     return a.id === b.id;
+  }
+  _checkForIntersectionWithOtherEdges(edge, oldEdge) {
+    const edgesOnStart = this.findEdgesAt(edge.start).filter(e => e.id !== edge.id);
+    edgesOnStart.map(edgeOnStart => {
+      const splitResult = split(edgeOnStart.coordinates, edge.start.coordinates);
+      if (splitResult) {
+        this.updateEdge(edgeOnEnd.id, splitResult.firstCoordinates);
+        const edge = this.addEdge(splitResult.secondCoordinates);
+        this.events.emit(event.SPLIT_EDGE, edgeOnEnd, edge);
+      }
+    });
+    const edgesOnEnd = this.findEdgesAt(edge.end).filter(e => e.id !== edge.id);
+    edgesOnEnd.map(edgeOnEnd => {
+      const splitResult = split(edgeOnEnd.coordinates, edge.end.coordinates);
+      if (splitResult) {
+        this.updateEdge(edgeOnEnd.id, splitResult.firstCoordinates);
+        const newEdge = this.addEdge(splitResult.secondCoordinates);
+        this.events.emit(SPLIT_EDGE, edgeOnEnd, newEdge);
+      }
+    });
+    if (oldEdge) {
+      const oldEdgeEdgesOnStart = this.findEdgesAt(oldEdge.start).filter(e => e.id !== oldEdge.id);
+      oldEdgeEdgesOnStart.map(oldEdgeEdgeOnStart => {
+        if (coordinatesAreEqual(oldEdgeEdgeOnStart.start.coordinates, oldEdge.start.coordinates)) {
+          if (coordinatesAreEqual(oldEdgeEdgeOnStart.start.coordinates, edge.start.coordinates) === false) {
+            let coordinates = oldEdgeEdgeOnStart.coordinates;
+            coordinates[0] = edge.start.coordinates;
+            this.updateEdge(oldEdgeEdgeOnStart.id, coordinates);
+          }
+        }
+        if (coordinatesAreEqual(oldEdgeEdgeOnStart.end.coordinates, oldEdge.start.coordinates)) {
+          if (coordinatesAreEqual(oldEdgeEdgeOnStart.end.coordinates, edge.start.coordinates) === false) {
+            let coordinates = oldEdgeEdgeOnStart.coordinates;
+            coordinates[oldEdgeEdgeOnStart.vertexCount - 1] = edge.start.coordinates;
+            this.updateEdge(oldEdgeEdgeOnStart.id, coordinates);
+          }
+        }
+      });
+      const oldEdgeEdgesOnEnd = this.findEdgesAt(oldEdge.end).filter(e => e.id !== oldEdge.id);
+      oldEdgeEdgesOnEnd.map(oldEdgeEdgeOnEnd => {
+        if (coordinatesAreEqual(oldEdgeEdgeOnEnd.start.coordinates, oldEdge.end.coordinates)) {
+          if (coordinatesAreEqual(oldEdgeEdgeOnEnd.start.coordinates, edge.end.coordinates) === false) {
+            let coordinates = oldEdgeEdgeOnEnd.coordinates;
+            coordinates[0] = edge.end.coordinates;
+            this.updateEdge(oldEdgeEdgeOnEnd.id, coordinates);
+          }
+        }
+        if (coordinatesAreEqual(oldEdgeEdgeOnEnd.end.coordinates, oldEdge.end.coordinates)) {
+          if (coordinatesAreEqual(oldEdgeEdgeOnEnd.end.coordinates, edge.end.coordinates) === false) {
+            let coordinates = oldEdgeEdgeOnEnd.coordinates;
+            coordinates[oldEdgeEdgeOnEnd.vertexCount - 1] = edge.end.coordinates;
+            this.updateEdge(oldEdgeEdgeOnEnd.id, coordinates);
+          }
+        }
+      });
+    }
   }
 }
 
