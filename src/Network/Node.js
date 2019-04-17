@@ -1,6 +1,7 @@
 export default class Node {
   constructor(coordinates) {
     this.updateCoordinates(coordinates);
+    this._edges = [];
   }
 
   get type() {
@@ -13,6 +14,16 @@ export default class Node {
 
   get y() {
     return this.coordinates[1];
+  }
+
+  addEdge(id) {
+    if (this._edges.indexOf(id) < 0) {
+      this._edges.push(id);
+    }
+  }
+
+  getEdges() {
+    return this._edges;
   }
 
   updateCoordinates(coordinates) {

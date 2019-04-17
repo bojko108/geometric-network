@@ -1,10 +1,25 @@
 import { assert } from 'chai';
 import data from './data/data.json';
+import alabak from './data/alabak.json';
 import Network from '../src/Network/Network';
 import Edge from '../src/Network/Edge';
 import * as events from '../src/Events/Events';
 
 describe('Network tests', () => {
+  it('TEST WITH ALABAK DATA', () => {
+    const network = Network.fromGeoJSON(alabak, 16);
+    assert.isDefined(network);
+
+    assert.equal(network.all().length, 191);
+    // const elements = network.all();
+    // assert.isArray(elements);
+    // elements.forEach(e => {
+    //   console.log(`edge: ${e.id}; on start: ${e.start.getEdges().join(',')}; on end: ${e.end.getEdges().join(',')}`);
+    // });
+    // console.log(alabak.features.length);
+    // console.log(elements.length);
+  });
+
   it('Should create a network', () => {
     const network = new Network(null, 16);
     assert.isDefined(network);
@@ -21,7 +36,9 @@ describe('Network tests', () => {
     const network = new Network(edges, 16);
     const elements = network.all();
     assert.isArray(elements);
-
+    // elements.forEach(e => {
+    //   console.log(`edge: ${e.id}; on start: ${e.start.getEdges().join(',')}; on end: ${e.end.getEdges().join(',')}`);
+    // });
     // no splits are made while the network is created
     assert.equal(elements.length, edges.length);
   });
@@ -37,6 +54,25 @@ describe('Network tests', () => {
 
     // should be undefined
     assert.isTrue(!network.getEdge(1123));
+  });
+
+  it('Should get multiple edges by ID', () => {
+    const edges = data.features.map(f => f.geometry.coordinates);
+    const network = new Network(edges, 16);
+
+    let result = network.getEdges([1, 2, 5]);
+    assert.isDefined(result);
+    assert.isArray(result);
+    assert.equal(result.length, 3);
+    assert.equal(result[0].id, 1);
+    assert.equal(result[1].id, 2);
+    assert.equal(result[2].id, 5);
+
+    result = network.getEdges([4124, 424, 1, 321]);
+    assert.isDefined(result);
+    assert.isArray(result);
+    assert.equal(result.length, 1);
+    assert.equal(result[0].id, 1);
   });
 
   it('Should get all edges at specified coordinates', () => {
@@ -180,6 +216,42 @@ describe('Network tests', () => {
     assert.deepEqual(movePoint, edge4.end.coordinates);
     assert.deepEqual(movePoint, edge5.end.coordinates);
     assert.deepEqual(movePoint, edge6.start.coordinates);
+
+    // const elements = network.all();
+    // assert.isArray(elements);
+    // elements.forEach(e => {
+    //   console.log(`edge: ${e.id}; on start: ${e.start.getEdges().join(',')}; on end: ${e.end.getEdges().join(',')}`);
+    // });
+  });
+
+  it('Should fill adjacency in the network', () => {
+    const edges = data.features.map(f => f.geometry.coordinates);
+    const network = new Network(edges, 16);
+
+    const edge1 = network.getEdge(1);
+    assert.deepEqual(edge1.start.getEdges(), []);
+    assert.deepEqual(edge1.end.getEdges(), [2]);
+    const edge2 = network.getEdge(2);
+    assert.deepEqual(edge2.start.getEdges(), [4, 5]);
+    assert.deepEqual(edge2.end.getEdges(), [1]);
+    const edge3 = network.getEdge(3);
+    assert.deepEqual(edge3.start.getEdges(), []);
+    assert.deepEqual(edge3.end.getEdges(), []);
+    const edge4 = network.getEdge(4);
+    assert.deepEqual(edge4.start.getEdges(), []);
+    assert.deepEqual(edge4.end.getEdges(), [2, 5]);
+    const edge5 = network.getEdge(5);
+    assert.deepEqual(edge5.start.getEdges(), []);
+    assert.deepEqual(edge5.end.getEdges(), [2, 4]);
+
+    // insert a new edge and check updated adjecency for existing edges
+    const edge6 = network.addEdge([edge1.start.coordinates, edge3.start.coordinates]);
+    assert.deepEqual(edge6.start.getEdges(), [1]);
+    assert.deepEqual(edge6.end.getEdges(), [3]);
+    assert.deepEqual(edge1.start.getEdges(), [6]);
+    assert.deepEqual(edge1.end.getEdges(), [2]);
+    assert.deepEqual(edge3.start.getEdges(), [6]);
+    assert.deepEqual(edge3.end.getEdges(), []);
   });
 
   it('Should save the network in GeoJSON format', () => {
