@@ -12,7 +12,7 @@ export default class Edge {
   }
 
   updateCoordinates(coordinates) {
-    this.coordinates = coordinates;
+    this.coordinates = [...coordinates];
     this.vertexCount = this.coordinates.length;
 
     this.start = new Node(this.coordinates[0]);
@@ -21,18 +21,8 @@ export default class Edge {
     this._calculateBounds();
   }
 
-  // setStart(node) {
-  //   this.start = node;
-  //   this._calculateBounds();
-  // }
-
-  // setEnd(node) {
-  //   this.end = node;
-  //   this._calculateBounds();
-  // }
-
   clone() {
-    return new Edge(this.id, [...this.coordinates]);
+    return new Edge(this.id, this.coordinates);
   }
 
   _calculateBounds() {

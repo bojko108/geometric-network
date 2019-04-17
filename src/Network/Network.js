@@ -44,12 +44,23 @@ export default class Network {
   }
 
   findEdgesIn(bbox) {
-    const searchBox = Array.isArray(bbox) ? { minX: bbox[0], minY: bbox[1], maxX: bbox[2], maxY: bbox[3] } : bbox;
+    let searchBox = {};
+    if (Array.isArray(bbox)) {
+      if (bbox.length !== 4) {
+        throw 'InvalidArgument: bbox must be defined as - [minX, minY, maxX, maxY]';
+      }
+      searchBox.minX = bbox[0];
+      searchBox.minY = bbox[1];
+      searchBox.maxX = bbox[2];
+      searchBox.maxY = bbox[3];
+    } else {
+      searchBox = bbox;
+    }
     return this._edgesTree.search(searchBox);
   }
 
   addEdge(coordinates) {
-    const edge = new Edge(++this._edgesIndex, [...coordinates]);
+    const edge = new Edge(++this._edgesIndex, coordinates);
     this._edgesTree.insert(edge);
     this._checkForIntersectionWithOtherEdges(edge);
     this.events.emit(events.ADD_EDGE, edge);
@@ -60,7 +71,7 @@ export default class Network {
     const oldEdge = this.getEdge(id);
 
     if (!oldEdge) {
-      throw `Edge with ID: ${id} was not found in the network`;
+      throw `InvalidArgument: edge with ID: ${id} was not found in the network`;
     }
 
     this._edgesTree.remove(oldEdge);
@@ -90,7 +101,7 @@ export default class Network {
   removeEdgeById(id) {
     const edge = this.getEdge(id);
     if (!edge) {
-      throw `Edge with ID: ${id} was not found in the network`;
+      throw `InvalidArgument: edge with ID: ${id} was not found in the network`;
     }
     if (this.removeEdge(edge)) {
       this.events.emit(events.REMOVE_EDGE, edge);
@@ -164,7 +175,7 @@ export default class Network {
         this.updateEdge(edgeOnEnd.id, splitResult.firstCoordinates);
         // this emits ADD_EDGE event
         const edge = this.addEdge(splitResult.secondCoordinates);
-        
+
         this.events.emit(event.SPLIT_EDGE, edgeOnEnd, edge);
       }
     });

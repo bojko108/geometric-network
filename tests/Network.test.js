@@ -21,6 +21,8 @@ describe('Network tests', () => {
     const network = new Network(edges, 16);
     const elements = network.all();
     assert.isArray(elements);
+
+    // no splits are made while the network is created
     assert.equal(elements.length, edges.length);
   });
 
@@ -49,10 +51,22 @@ describe('Network tests', () => {
     }
   });
 
-  it('Should get all edges intersecting bbox', () => {
+  it('Should get all edges intersecting bbox defined as object', () => {
     const edges = data.features.map(f => f.geometry.coordinates);
     const network = new Network(edges, 16);
     const result = network.findEdgesIn({ minX: 23.9467, minY: 42.1637, maxX: 23.9595, maxY: 42.172 });
+
+    assert.isArray(result);
+    assert.equal(result.length, 3);
+    for (let i = 0; i < result.length; i++) {
+      assert.isTrue(result[i] instanceof Edge);
+    }
+  });
+
+  it('Should get all edges intersecting bbox defined as array', () => {
+    const edges = data.features.map(f => f.geometry.coordinates);
+    const network = new Network(edges, 16);
+    const result = network.findEdgesIn([23.9467, 42.1637, 23.9595, 42.172]);
 
     assert.isArray(result);
     assert.equal(result.length, 3);
@@ -174,5 +188,26 @@ describe('Network tests', () => {
     const network = new Network(edges, 16);
     const json = network.toGeoJSON();
     assert.isDefined(json);
+  });
+
+  it('Should throw error when updating non existing edge', () => {
+    const network = new Network(null, 16);
+    assert.throws(() => {
+      network.updateEdge(1, []);
+    }, 'InvalidArgument: edge with ID: 1 was not found in the network');
+  });
+
+  it('Should throw error when removing non existing edge', () => {
+    const network = new Network(null, 16);
+    assert.throws(() => {
+      network.removeEdgeById(1);
+    }, 'InvalidArgument: edge with ID: 1 was not found in the network');
+  });
+
+  it('Should throw error when bbox is invalid', () => {
+    const network = new Network(null, 16);
+    assert.throws(() => {
+      network.findEdgesIn([23.9467]);
+    }, 'InvalidArgument: bbox must be defined as - [minX, minY, maxX, maxY]');
   });
 });

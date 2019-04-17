@@ -1,8 +1,6 @@
 export default class Node {
   constructor(coordinates) {
-    this.coordinates = coordinates;
-
-    this._calculateBounds();
+    this.updateCoordinates(coordinates);
   }
 
   get type() {
@@ -15,6 +13,12 @@ export default class Node {
 
   get y() {
     return this.coordinates[1];
+  }
+
+  updateCoordinates(coordinates) {
+    this.coordinates = [...coordinates];
+
+    this._calculateBounds();
   }
 
   clone() {
