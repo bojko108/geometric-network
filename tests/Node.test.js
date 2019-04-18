@@ -25,7 +25,7 @@ describe('Node tests', () => {
 
     assert.isDefined(cloned);
 
-    cloned.updateCoordinates(newCoordinates);
+    cloned.setCoordinates(newCoordinates);
 
     assert.deepEqual(node.coordinates, coordinates);
     assert.deepEqual(cloned.coordinates, newCoordinates);

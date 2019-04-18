@@ -1,5 +1,6 @@
 import { assert } from 'chai';
 import Edge from '../src/Network/Edge';
+import Node from '../src/Network/Node';
 import data from './data/data.json';
 
 describe('Edge tests', () => {
@@ -25,10 +26,11 @@ describe('Edge tests', () => {
     assert.deepEqual(edge.start.y, coordinates[0][1]);
     assert.deepEqual(edge.end.x, coordinates[coordinates.length - 1][0]);
     assert.deepEqual(edge.end.y, coordinates[coordinates.length - 1][1]);
+    assert.deepEqual(edge.start.adjacent, [edge.end.id]);
+    assert.deepEqual(edge.end.adjacent, [edge.start.id]);
   });
 
   it('Should clone an edge', () => {
-    const id = 1;
     const coordinates = data.features[0].geometry.coordinates;
     const newCoordinates = [[0, 0], [1, 1]];
 
@@ -37,10 +39,11 @@ describe('Edge tests', () => {
 
     assert.isDefined(cloned);
 
-    cloned.setStart(newCoordinates[0]);
-    cloned.setEnd(newCoordinates[1]);
+    cloned.setStart(new Node(newCoordinates[0]));
+    cloned.setEnd(new Node(newCoordinates[1]));
     cloned.setCoordinates(newCoordinates);
 
+    assert.equal(cloned.id, edge.id);
     assert.deepEqual(edge.coordinates, coordinates);
     assert.deepEqual(cloned.coordinates, newCoordinates);
   });

@@ -1264,8 +1264,8 @@ quickselect@^1.0.1:
   integrity sha512-qN0Gqdw4c4KGPsBOQafj6yj/PA6c/L63f6CaZ/DCF/xF4Esu3jVmKLUDYxghFx8Kb/O7y9tI7x2RjTSXwdK1iQ==
 
 rbush@bojko108/rbush:
-  version "3.1.2"
-  resolved "https://codeload.github.com/bojko108/rbush/tar.gz/f0e7faa9fd76041b6f113b0e1d7b9d6b1eb8aefd"
+  version "3.2.0"
+  resolved "https://codeload.github.com/bojko108/rbush/tar.gz/9d5a5c752b682defd073bfa7063369e3021cdc97"
   dependencies:
     quickselect "^1.0.1"
 

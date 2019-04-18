@@ -10,7 +10,13 @@ export const getEdgeId = () => {
 };
 
 export const coordinatesAreEqual = (a, b) => {
-  return a[0] === b[0] && a[1] === b[1];
+  return Math.abs(a[0] - b[0]) < Number.EPSILON && Math.abs(a[1] - b[1]) < Number.EPSILON;
+  // return a[0] === b[0] && a[1] === b[1];
+};
+
+export const nodesAreEqual = (a, b) => {
+  return Math.abs(a.x - b.x) < Number.EPSILON && Math.abs(a.y - b.y) < Number.EPSILON;
+  // return a.x === b.x && a.y === b.y;
 };
 
 export const squaredDistance = (p1, p2) => {

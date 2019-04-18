@@ -3,8 +3,8 @@ import { getNodeId } from '../helpers';
 export default class Node {
   constructor(coordinates) {
     this.id = getNodeId();
-    this._edges = [];
-    this.updateCoordinates(coordinates);
+    this._adjacent = [];
+    this.setCoordinates(coordinates);
   }
 
   get type() {
@@ -19,17 +19,26 @@ export default class Node {
     return this.coordinates[1];
   }
 
-  addEdge(id) {
-    if (this._edges.indexOf(id) < 0) {
-      this._edges.push(id);
+  get adjacent() {
+    return this._adjacent;
+  }
+
+  addAdjacent(nodeOrId) {
+    const id = nodeOrId instanceof Node ? nodeOrId.id : nodeOrId;
+    if (this._adjacent.indexOf(id) < 0) {
+      this._adjacent.push(id);
     }
   }
 
-  getEdges() {
-    return this._edges;
+  removeAdjacent(nodeOrId) {
+    const id = nodeOrId instanceof Node ? nodeOrId.id : nodeOrId;
+    const index = this._adjacent.indexOf(id);
+    if (index > -1) {
+      this._adjacent.splice(index, 1);
+    }
   }
 
-  updateCoordinates(coordinates) {
+  setCoordinates(coordinates) {
     this.coordinates = [...coordinates];
 
     this._calculateBounds();

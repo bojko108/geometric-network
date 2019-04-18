@@ -2,11 +2,35 @@ import { getEdgeId } from '../helpers';
 import Node from './Node';
 
 export default class Edge {
-  constructor(coordinates, start, end) {
-    this.id = getEdgeId();
+  /**
+   * Creates a new Edge element
+   * @param {!Array.<Number>} coordinates
+   * @param {Node|Array.<Number>} start - sets start node for this edge, default is
+   * the first item in `coordinates` array
+   * @param {Node|Array.<Number>} end - sets end node for this edge, default is the
+   * last item in `coordinates` array
+   * @param {Number} id - optional ID value, by default the value is generated
+   * automatically from an internal idex but in some cases (for example clonning
+   * an edge) we need to set the ID manually.
+   */
+  constructor(coordinates, start, end, id) {
+    this.id = id || getEdgeId();
 
-    this.setStart(start || coordinates[0]);
-    this.setEnd(end || coordinates[coordinates.length - 1]);
+    if (start) {
+      this.start = start instanceof Node ? start : new Node(start);
+    } else {
+      this.start = new Node(coordinates[0]);
+    }
+    if (end) {
+      this.end = end instanceof Node ? end : new Node(end);
+    } else {
+      this.end = new Node(coordinates[coordinates.length - 1]);
+    }
+
+    // by default the start and end nodes are connected
+    this.start.addAdjacent(this.end.id);
+    this.end.addAdjacent(this.start.id);
+
     this.setCoordinates(coordinates);
   }
 
@@ -15,11 +39,23 @@ export default class Edge {
   }
 
   setStart(start) {
-    this.start = start instanceof Node ? start : new Node(start);
+    // remove connectivity to the previous node
+    this.end.removeAdjacent(this.start.id);
+
+    this.start = start;
+
+    // add connectivity to the new node
+    this.end.addAdjacent(this.start.id);
   }
 
   setEnd(end) {
-    this.end = end instanceof Node ? end : new Node(end);
+    // remove connectivity to the previous node
+    this.start.removeAdjacent(this.end.id);
+
+    this.end = end;
+
+    // add connectivity to the new node
+    this.start.addAdjacent(this.end.id);
   }
 
   setCoordinates(coordinates, start, end) {
@@ -37,7 +73,7 @@ export default class Edge {
   }
 
   clone() {
-    return new Edge(this.coordinates, this.start.clone(), this.end.clone());
+    return new Edge(this.coordinates, this.start, this.end, this.id);
   }
 
   _calculateBounds() {
