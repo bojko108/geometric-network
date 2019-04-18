@@ -1,11 +1,14 @@
+import { getNodeId } from '../helpers';
+
 export default class Node {
   constructor(coordinates) {
-    this.updateCoordinates(coordinates);
+    this.id = getNodeId();
     this._edges = [];
+    this.updateCoordinates(coordinates);
   }
 
   get type() {
-    return 'point';
+    return 'node';
   }
 
   get x() {
@@ -33,7 +36,7 @@ export default class Node {
   }
 
   clone() {
-    return new Node([...this.coordinates]);
+    return new Node(this.coordinates);
   }
 
   _calculateBounds() {

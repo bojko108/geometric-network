@@ -1,3 +1,14 @@
+let nodesIdIndex = 0;
+let edgesIdIndex = 0;
+
+export const getNodeId = () => {
+  return ++nodesIdIndex;
+};
+
+export const getEdgeId = () => {
+  return ++edgesIdIndex;
+};
+
 export const coordinatesAreEqual = (a, b) => {
   return a[0] === b[0] && a[1] === b[1];
 };

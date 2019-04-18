@@ -4,6 +4,7 @@ import alabak from './data/alabak.json';
 import Network from '../src/Network/Network';
 import Edge from '../src/Network/Edge';
 import * as events from '../src/Events/Events';
+import { findPath } from '../src/Search/Search';
 
 describe('Network tests', () => {
   it('TEST WITH ALABAK DATA', () => {
@@ -11,6 +12,7 @@ describe('Network tests', () => {
     assert.isDefined(network);
 
     assert.equal(network.all().length, 191);
+
     // const elements = network.all();
     // assert.isArray(elements);
     // elements.forEach(e => {
@@ -36,9 +38,6 @@ describe('Network tests', () => {
     const network = new Network(edges, 16);
     const elements = network.all();
     assert.isArray(elements);
-    // elements.forEach(e => {
-    //   console.log(`edge: ${e.id}; on start: ${e.start.getEdges().join(',')}; on end: ${e.end.getEdges().join(',')}`);
-    // });
     // no splits are made while the network is created
     assert.equal(elements.length, edges.length);
   });
@@ -178,7 +177,6 @@ describe('Network tests', () => {
   });
 
   it(`Should update all connected edges`, () => {
-    debugger;
     const edges = data.features.map(f => f.geometry.coordinates);
     const network = new Network(edges, 16);
     assert.equal(network.all().length, edges.length);
@@ -193,6 +191,12 @@ describe('Network tests', () => {
     assert.deepEqual(movePoint, edge2.start.coordinates);
     assert.deepEqual(movePoint, edge4.end.coordinates);
     assert.deepEqual(movePoint, edge5.end.coordinates);
+
+    const adjacency = network.getAdjacency();
+    console.log(adjacency);
+    debugger;
+    const edge1 = network.getEdge(1);
+    findPath('1.start', '5.start', adjacency);
   });
 
   it(`Should update all connected edges + split an existing edge`, () => {
@@ -229,29 +233,35 @@ describe('Network tests', () => {
     const network = new Network(edges, 16);
 
     const edge1 = network.getEdge(1);
-    assert.deepEqual(edge1.start.getEdges(), []);
-    assert.deepEqual(edge1.end.getEdges(), [2]);
+    assert.deepEqual(edge1.start.getEdges(), [1]);
+    assert.deepEqual(edge1.end.getEdges(), [1, 2]);
     const edge2 = network.getEdge(2);
-    assert.deepEqual(edge2.start.getEdges(), [4, 5]);
-    assert.deepEqual(edge2.end.getEdges(), [1]);
+    assert.deepEqual(edge2.start.getEdges(), [2, 4, 5]);
+    assert.deepEqual(edge2.end.getEdges(), [2, 1]);
     const edge3 = network.getEdge(3);
-    assert.deepEqual(edge3.start.getEdges(), []);
-    assert.deepEqual(edge3.end.getEdges(), []);
+    assert.deepEqual(edge3.start.getEdges(), [3]);
+    assert.deepEqual(edge3.end.getEdges(), [3]);
     const edge4 = network.getEdge(4);
-    assert.deepEqual(edge4.start.getEdges(), []);
-    assert.deepEqual(edge4.end.getEdges(), [2, 5]);
+    assert.deepEqual(edge4.start.getEdges(), [4]);
+    assert.deepEqual(edge4.end.getEdges(), [4, 2, 5]);
     const edge5 = network.getEdge(5);
-    assert.deepEqual(edge5.start.getEdges(), []);
-    assert.deepEqual(edge5.end.getEdges(), [2, 4]);
+    assert.deepEqual(edge5.start.getEdges(), [5]);
+    assert.deepEqual(edge5.end.getEdges(), [5, 2, 4]);
 
     // insert a new edge and check updated adjecency for existing edges
     const edge6 = network.addEdge([edge1.start.coordinates, edge3.start.coordinates]);
-    assert.deepEqual(edge6.start.getEdges(), [1]);
-    assert.deepEqual(edge6.end.getEdges(), [3]);
-    assert.deepEqual(edge1.start.getEdges(), [6]);
-    assert.deepEqual(edge1.end.getEdges(), [2]);
-    assert.deepEqual(edge3.start.getEdges(), [6]);
-    assert.deepEqual(edge3.end.getEdges(), []);
+    assert.deepEqual(edge6.start.getEdges(), [6, 1]);
+    assert.deepEqual(edge6.end.getEdges(), [6, 3]);
+    assert.deepEqual(edge1.start.getEdges(), [1, 6]);
+    assert.deepEqual(edge1.end.getEdges(), [1, 2]);
+    assert.deepEqual(edge3.start.getEdges(), [3, 6]);
+    assert.deepEqual(edge3.end.getEdges(), [3]);
+
+    const elements = network.all();
+    assert.isArray(elements);
+    elements.forEach(e => {
+      console.log(`edge: ${e.id}; on start: ${e.start.getEdges().join(',')}; on end: ${e.end.getEdges().join(',')}`);
+    });
   });
 
   it('Should save the network in GeoJSON format', () => {

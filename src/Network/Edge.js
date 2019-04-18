@@ -1,28 +1,43 @@
+import { getEdgeId } from '../helpers';
 import Node from './Node';
 
 export default class Edge {
-  constructor(id, coordinates) {
-    this.id = id;
+  constructor(coordinates, start, end) {
+    this.id = getEdgeId();
 
-    this.updateCoordinates(coordinates);
+    this.setStart(start || coordinates[0]);
+    this.setEnd(end || coordinates[coordinates.length - 1]);
+    this.setCoordinates(coordinates);
   }
 
   get type() {
-    return 'line';
+    return 'edge';
   }
 
-  updateCoordinates(coordinates) {
+  setStart(start) {
+    this.start = start instanceof Node ? start : new Node(start);
+  }
+
+  setEnd(end) {
+    this.end = end instanceof Node ? end : new Node(end);
+  }
+
+  setCoordinates(coordinates, start, end) {
     this.coordinates = [...coordinates];
     this.vertexCount = this.coordinates.length;
 
-    this.start = new Node(this.coordinates[0]);
-    this.end = new Node(this.coordinates[this.vertexCount - 1]);
-
     this._calculateBounds();
+
+    if (start) {
+      this.setStart(start);
+    }
+    if (end) {
+      this.setEnd(end);
+    }
   }
 
   clone() {
-    return new Edge(this.id, this.coordinates);
+    return new Edge(this.coordinates, this.start.clone(), this.end.clone());
   }
 
   _calculateBounds() {

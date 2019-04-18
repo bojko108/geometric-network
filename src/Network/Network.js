@@ -26,6 +26,43 @@ export default class Network {
     return new Network(edges, maxEntries);
   }
 
+  getAdjacency() {
+    debugger;
+    let matrix = {};
+    const edges = this.all();
+    for (let i = 0; i < edges.length; i++) {
+      let id = `${edges[i].id}`;
+      if (!matrix[id]) {
+        matrix[id] = {};
+        let adjEdges = edges[i].start.getEdges();
+        for (let k = 0; k < adjEdges.length; k++) {
+          const e = this.getEdge(adjEdges[k]);
+          if (coordinatesAreEqual(e.start.coordinates, edges[i].start.coordinates)) {
+            matrix[id][`${e.id}_end`] = 1;
+          }
+          if (coordinatesAreEqual(e.end.coordinates, edges[i].start.coordinates)) {
+            matrix[id][`${e.id}_start`] = 1;
+          }
+        }
+      }
+      id = `${edges[i].id}.end`;
+      if (!matrix[id]) {
+        matrix[id] = {};
+        let adjEdges = edges[i].end.getEdges();
+        for (let k = 0; k < adjEdges.length; k++) {
+          const e = this.getEdge(adjEdges[k]);
+          if (coordinatesAreEqual(e.start.coordinates, edges[i].end.coordinates)) {
+            matrix[id][`${e.id}_end`] = 1;
+          }
+          if (coordinatesAreEqual(e.end.coordinates, edges[i].end.coordinates)) {
+            matrix[id][`${e.id}_start`] = 1;
+          }
+        }
+      }
+    }
+    return matrix;
+  }
+
   all() {
     return this._edgesTree.all();
   }

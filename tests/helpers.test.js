@@ -1,7 +1,23 @@
 import { assert } from 'chai';
-import { coordinatesAreEqual, isOnSegment, split } from '../src/helpers';
+import { getNodeId, getEdgeId, coordinatesAreEqual, isOnSegment, split } from '../src/helpers';
 
 describe('Helpers tests', () => {
+  it('Should generate Node ID', () => {
+    const id1 = getNodeId();
+    const id2 = getNodeId();
+
+    assert.notEqual(id1, id2);
+    assert.equal(id2 - id1, 1);
+  });
+  
+  it('Should generate Edge ID', () => {
+    const id1 = getEdgeId();
+    const id2 = getEdgeId();
+
+    assert.notEqual(id1, id2);
+    assert.equal(id2 - id1, 1);
+  });
+
   it('Should compare coordinates', () => {
     let a = [23.90328286754705, 42.13876052456928];
     let b = [23.90328286754705, 42.13876052456928];
