@@ -106,20 +106,12 @@ export default class Network {
     // disconnect from edges on start node
     edgesOnStart.map(edgeOnStart => {
       this._clearAdjacency(edge, edgeOnStart);
-      // edge.start.removeAdjacent(edgeOnStart.start);
-      // edge.start.removeAdjacent(edgeOnStart.end);
-      // edgeOnStart.start.removeAdjacent(edge.start);
-      // edgeOnStart.end.removeAdjacent(edge.start);
       removeStartNode = false;
     });
     const edgesOnEnd = this.findEdgesAt(edge.end).filter(e => e.id !== edge.id);
     // disconnect from edges on end node
     edgesOnEnd.map(edgeOnEnd => {
       this._clearAdjacency(edge, edgeOnEnd);
-      // edge.end.removeAdjacent(edgeOnEnd.start);
-      // edge.end.removeAdjacent(edgeOnEnd.end);
-      // edgeOnEnd.start.removeAdjacent(edge.end);
-      // edgeOnEnd.end.removeAdjacent(edge.end);
       removeEndNode = false;
     });
 
@@ -195,8 +187,8 @@ export default class Network {
   }
 
   addEdge(coordinates, startNode, endNode) {
-    const edgeStartNode = startNode || this.findNodesAt(coordinates[0])[0],
-      edgeEndNode = endNode || this.findNodesAt(coordinates[coordinates.length - 1])[0];
+    const edgeStartNode = startNode || this.findNodeAt(coordinates[0]),
+      edgeEndNode = endNode || this.findNodeAt(coordinates[coordinates.length - 1]);
 
     const edge = new Edge(coordinates, edgeStartNode, edgeEndNode);
 
