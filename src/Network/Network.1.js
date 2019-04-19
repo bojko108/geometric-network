@@ -1,5 +1,5 @@
 import rbush from 'rbush';
-import { toGeoJSON, resetIndices, coordinatesAreEqual, nodesAreEqual, split } from '../Helpers';
+import { coordinatesAreEqual, nodesAreEqual, split } from '../helpers';
 import Node from './Node';
 import Edge from './Edge';
 import * as events from '../Events/Events';
@@ -7,8 +7,6 @@ import EventEmitter from '../Events/EventEmitter';
 
 export default class Network {
   constructor(maxEntries = 9, edges = []) {
-    resetIndices();
-
     this._elementsTree = new rbush(maxEntries);
 
     this.events = new EventEmitter();
@@ -20,8 +18,6 @@ export default class Network {
     }
   }
 
-  // tested
-
   static fromGeoJSON(json, maxEntries = 9) {
     let edges = json.features.map(f => {
       return f.geometry.coordinates;
@@ -29,9 +25,42 @@ export default class Network {
     return new Network(maxEntries, edges);
   }
 
-  toGeoJSON(name = 'Network', elementType) {
-    const elements = this.all(elementType);
-    return toGeoJSON(name, elements);
+  // TODO
+  getAdjacency() {
+    debugger;
+    let matrix = {};
+    const edges = this.all();
+    for (let i = 0; i < edges.length; i++) {
+      let id = `${edges[i].id}`;
+      if (!matrix[id]) {
+        matrix[id] = {};
+        let adjEdges = edges[i].start.getEdges();
+        for (let k = 0; k < adjEdges.length; k++) {
+          const e = this.getEdge(adjEdges[k]);
+          if (coordinatesAreEqual(e.start.coordinates, edges[i].start.coordinates)) {
+            matrix[id][`${e.id}_end`] = 1;
+          }
+          if (coordinatesAreEqual(e.end.coordinates, edges[i].start.coordinates)) {
+            matrix[id][`${e.id}_start`] = 1;
+          }
+        }
+      }
+      id = `${edges[i].id}.end`;
+      if (!matrix[id]) {
+        matrix[id] = {};
+        let adjEdges = edges[i].end.getEdges();
+        for (let k = 0; k < adjEdges.length; k++) {
+          const e = this.getEdge(adjEdges[k]);
+          if (coordinatesAreEqual(e.start.coordinates, edges[i].end.coordinates)) {
+            matrix[id][`${e.id}_end`] = 1;
+          }
+          if (coordinatesAreEqual(e.end.coordinates, edges[i].end.coordinates)) {
+            matrix[id][`${e.id}_start`] = 1;
+          }
+        }
+      }
+    }
+    return matrix;
   }
 
   all(elementType) {
@@ -42,73 +71,9 @@ export default class Network {
     }
   }
 
-  getEdgeById(id) {
-    return this.all('edge').filter(edge => edge.id === id)[0];
-  }
-
-  getEdgesById(ids) {
-    return this.all('edge').filter(edge => ids.indexOf(edge.id) > -1);
-  }
-
-  findElementsAt(node, elementType) {
-    return this._elementsTree.search(node, elementType);
-  }
-
-  findElementsIn(bbox, elementType) {
-    return this._elementsTree.search(bbox, elementType);
-  }
-
-  findEdgesAt(coordinates) {
-    const node = coordinates instanceof Node ? coordinates : new Node(coordinates);
-    return this.findElementsAt(node, 'edge').filter(e => e.type === 'edge');
-  }
-
-  findEdgesIn(bbox) {
-    let searchBox = {};
-    if (Array.isArray(bbox)) {
-      if (bbox.length !== 4) {
-        throw 'InvalidArgument: bbox must be defined as - [minX, minY, maxX, maxY]';
-      }
-      searchBox.minX = bbox[0];
-      searchBox.minY = bbox[1];
-      searchBox.maxX = bbox[2];
-      searchBox.maxY = bbox[3];
-    } else {
-      searchBox = bbox;
-    }
-    return this.findElementsIn(searchBox, 'edge').filter(e => e.type === 'edge');
-  }
-
-  findNodeAt(coordinates) {
-    return this.findNodesAt(coordinates)[0];
-  }
-
-  findNodesAt(coordinates) {
-    const node = coordinates instanceof Node ? coordinates : new Node(coordinates);
-    return this.findElementsAt(node, 'node').filter(e => e.type === 'node');
-  }
-
-  findNodesIn(bbox) {
-    let searchBox = {};
-    if (Array.isArray(bbox)) {
-      if (bbox.length !== 4) {
-        throw 'InvalidArgument: bbox must be defined as - [minX, minY, maxX, maxY]';
-      }
-      searchBox.minX = bbox[0];
-      searchBox.minY = bbox[1];
-      searchBox.maxX = bbox[2];
-      searchBox.maxY = bbox[3];
-    } else {
-      searchBox = bbox;
-    }
-    return this.findElementsIn(searchBox, 'node').filter(e => e.type === 'node');
-  }
-
-  // endtested
-
   // TODO
   connectEdge(edgeOrId) {
-    const edge = edgeOrId instanceof Edge ? edgeOrId : this.getEdgeById(edgeOrId);
+    const edge = edgeOrId instanceof Edge ? edgeOrId : this.getEdge(edgeOrId);
 
     if (!edge) {
       throw `InvalidArgument: edge with ID: ${edgeOrId} was not found in the network`;
@@ -128,7 +93,7 @@ export default class Network {
 
   // TODO
   disconnectEdge(edgeOrId) {
-    const edge = edgeOrId instanceof Edge ? edgeOrId : this.getEdgeById(edgeOrId);
+    const edge = edgeOrId instanceof Edge ? edgeOrId : this.getEdge(edgeOrId);
 
     if (!edge) {
       throw `InvalidArgument: edge with ID: ${edgeOrId} was not found in the network`;
@@ -159,6 +124,68 @@ export default class Network {
   // TODO
   removeOrphanNodes() {}
 
+  getEdge(id) {
+    return this._elementsTree.all().filter(edge => edge.id === id)[0];
+  }
+
+  getEdges(ids) {
+    return this._elementsTree.all().filter(edge => ids.indexOf(edge.id) > -1);
+  }
+
+  findElementsAt(node, elementType) {
+    return this._elementsTree.search(node, elementType);
+  }
+
+  findElementsIn(bbox, elementType) {
+    return this._elementsTree.search(bbox, elementType);
+  }
+
+  findNodeAt(coordinates) {
+    return this.findNodesAt(coordinates)[0];
+  }
+
+  findNodesAt(coordinates) {
+    const node = coordinates instanceof Node ? coordinates : new Node(coordinates);
+    return this.findElementsAt(node, 'node').filter(e => e.type === 'node');
+  }
+
+  findNodesIn(bbox) {
+    let searchBox = {};
+    if (Array.isArray(bbox)) {
+      if (bbox.length !== 4) {
+        throw 'InvalidArgument: bbox must be defined as - [minX, minY, maxX, maxY]';
+      }
+      searchBox.minX = bbox[0];
+      searchBox.minY = bbox[1];
+      searchBox.maxX = bbox[2];
+      searchBox.maxY = bbox[3];
+    } else {
+      searchBox = bbox;
+    }
+    return this.findElementsIn(searchBox, 'node').filter(e => e.type === 'node');
+  }
+
+  findEdgesAt(coordinates) {
+    const node = coordinates instanceof Node ? coordinates : new Node(coordinates);
+    return this.findElementsAt(node, 'edge').filter(e => e.type === 'edge');
+  }
+
+  findEdgesIn(bbox) {
+    let searchBox = {};
+    if (Array.isArray(bbox)) {
+      if (bbox.length !== 4) {
+        throw 'InvalidArgument: bbox must be defined as - [minX, minY, maxX, maxY]';
+      }
+      searchBox.minX = bbox[0];
+      searchBox.minY = bbox[1];
+      searchBox.maxX = bbox[2];
+      searchBox.maxY = bbox[3];
+    } else {
+      searchBox = bbox;
+    }
+    return this.findElementsIn(searchBox, 'edge').filter(e => e.type === 'edge');
+  }
+
   addEdge(coordinates, startNode, endNode) {
     const edgeStartNode = startNode || this.findNodeAt(coordinates[0]),
       edgeEndNode = endNode || this.findNodeAt(coordinates[coordinates.length - 1]);
@@ -176,7 +203,7 @@ export default class Network {
   }
 
   updateEdge(id, coordinates, startNode, endNode) {
-    const oldEdge = this.getEdgeById(id);
+    const oldEdge = this.getEdge(id);
 
     if (!oldEdge) {
       throw `InvalidArgument: edge with ID: ${id} was not found in the network`;
@@ -260,14 +287,57 @@ export default class Network {
   }
 
   removeEdgeById(id) {
-    const edge = this.getEdgeById(id);
+    const edge = this.getEdge(id);
     if (!edge) {
       throw `InvalidArgument: edge with ID: ${id} was not found in the network`;
     }
     this.removeEdge(edge);
   }
 
-  
+  toGeoJSON(name = 'Network') {
+    const features = [];
+    const elements = this.all();
+    for (let i = 0; i < elements.length; i++) {
+      let coordinates = [];
+      if (elements[i].type === 'edge') {
+        for (let j = 0; j < elements[i].coordinates.length; j++) {
+          const vertex = elements[i].coordinates[j];
+          coordinates.push(`[${vertex[0]},${vertex[1]}]`);
+        }
+      } else {
+        coordinates = elements[i].coordinates;
+      }
+      let text = `
+{
+  "type": "Feature",
+  "id": ${elements[i].id},
+  "geometry": {
+    "type": "${elements[i].type === 'edge' ? 'LineString' : 'Point'}",
+    "coordinates": [
+      ${coordinates.join(',')}
+    ]
+  },
+  "properties": {
+    "fid": ${elements[i].id},
+    "adjacent": "${elements[i].type === 'node' ? elements[i].adjacent.join(';') : ''}",
+    "minX": ${elements[i].minX},
+    "minY": ${elements[i].minY},
+    "maxX": ${elements[i].maxX},
+    "maxY": ${elements[i].maxY}
+  }
+}`;
+
+      features.push(text);
+    }
+
+    return `
+{
+  "type": "FeatureCollection",
+  "name": "${name}",
+  "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+  "features": [${features.join(',')}]
+}`;
+  }
 
   _equalityFunction(a, b) {
     return a.id === b.id;

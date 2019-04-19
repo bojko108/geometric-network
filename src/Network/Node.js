@@ -1,4 +1,4 @@
-import { getNodeId } from '../helpers';
+import { getNodeId } from '../Helpers';
 
 export default class Node {
   constructor(coordinates) {

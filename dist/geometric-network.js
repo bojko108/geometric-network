@@ -100,7 +100,7 @@ rbush.prototype = {
       for (i = 0, len = node.children.length; i < len; i++) {
         child = node.children[i];
         childBBox = node.leaf ? toBBox(child) : child;
-        if (childBBox.type === 'line' && (bbox.minX - bbox.maxX === 0 && bbox.minY - bbox.maxY === 0)) {
+        if (childBBox.type === 'edge' && (bbox.minX - bbox.maxX === 0 && bbox.minY - bbox.maxY === 0)) {
           if (intersectsLine(bbox, childBBox)) {
             if (node.leaf) result.push(child);
             else if (contains(bbox, childBBox)) this._all(child, result);
@@ -131,7 +131,7 @@ rbush.prototype = {
       for (i = 0, len = node.children.length; i < len; i++) {
         child = node.children[i];
         childBBox = node.leaf ? toBBox(child) : child;
-        if (childBBox.type === 'line') {
+        if (childBBox.type === 'edge') {
           if (intersectsLine(bbox, childBBox)) {
             if (node.leaf || contains(bbox, childBBox)) return true;
             nodesToSearch.push(child);
@@ -303,6 +303,7 @@ rbush.prototype = {
       bbox = isNode ? item : toBBox(item),
       insertPath = [];
     var node = this._chooseSubtree(bbox, this.data, level, insertPath);
+    if (node.children.indexOf(item) > -1) return;
     node.children.push(item);
     extend(node, bbox);
     while (level >= 0) {
@@ -507,8 +508,66 @@ function multiSelect(arr, left, right, n, compare) {
 }
 rbush_1.default = default_1;
 
+let nodesIdIndex = 0;
+let edgesIdIndex = 0;
+const resetIndices = () => {
+  nodesIdIndex = 0;
+  edgesIdIndex = 0;
+};
+const getNodeId = () => {
+  return ++nodesIdIndex;
+};
+const getEdgeId = () => {
+  return ++edgesIdIndex;
+};
+
+const toFeature = element => {
+  let geometry = {
+    type: '',
+    coordinates: []
+  };
+  if (element.type === 'edge') {
+    geometry.type = 'LineString';
+    for (let j = 0; j < element.coordinates.length; j++) {
+      geometry.coordinates.push([...element.coordinates[j]]);
+    }
+  } else {
+    geometry.type = 'Point';
+    geometry.coordinates = [...element.coordinates];
+  }
+  const result = {
+    type: 'Feature',
+    id: element.id,
+    geometry: geometry,
+    properties: {
+      fid: element.id,
+      adjacent: element.type === 'node' ? element.adjacent.join(';') : '',
+      minX: element.minX,
+      minY: element.minY,
+      maxX: element.maxX,
+      maxY: element.maxY
+    }
+  };
+  return result;
+};
+const toGeoJSON = (name = 'Network', elements) => {
+  let result = {
+    type: 'FeatureCollection',
+    name: name,
+    crs: { type: 'name', properties: { name: 'urn:ogc:def:crs:OGC:1.3:CRS84' } },
+    features: []
+  };
+  for (let i = 0; i < elements.length; i++) {
+    result.features.push(toFeature(elements[i]));
+  }
+  return result;
+};
+
 const coordinatesAreEqual = (a, b) => {
-  return a[0] === b[0] && a[1] === b[1];
+  return Math.abs(a[0] - b[0]) < Number.EPSILON && Math.abs(a[1] - b[1]) < Number.EPSILON;
+};
+const nodesAreEqual = (a, b) => {
+  return Math.abs(a.x - b.x) < Number.EPSILON && Math.abs(a.y - b.y) < Number.EPSILON;
 };
 const squaredDistance = (p1, p2) => {
   const dy = p2[0] - p1[0];
@@ -555,10 +614,12 @@ const split = (lineCoordinates, point) => {
 
 class Node {
   constructor(coordinates) {
-    this.updateCoordinates(coordinates);
+    this.id = getNodeId();
+    this._adjacent = [];
+    this.setCoordinates(coordinates);
   }
   get type() {
-    return 'point';
+    return 'node';
   }
   get x() {
     return this.coordinates[0];
@@ -566,12 +627,28 @@ class Node {
   get y() {
     return this.coordinates[1];
   }
-  updateCoordinates(coordinates) {
+  get adjacent() {
+    return this._adjacent;
+  }
+  addAdjacent(nodeOrId) {
+    const id = nodeOrId instanceof Node ? nodeOrId.id : nodeOrId;
+    if (this._adjacent.indexOf(id) < 0) {
+      this._adjacent.push(id);
+    }
+  }
+  removeAdjacent(nodeOrId) {
+    const id = nodeOrId instanceof Node ? nodeOrId.id : nodeOrId;
+    const index = this._adjacent.indexOf(id);
+    if (index > -1) {
+      this._adjacent.splice(index, 1);
+    }
+  }
+  setCoordinates(coordinates) {
     this.coordinates = [...coordinates];
     this._calculateBounds();
   }
   clone() {
-    return new Node([...this.coordinates]);
+    return new Node(this.coordinates);
   }
   _calculateBounds() {
     this.minX = this.coordinates[0];
@@ -582,22 +659,48 @@ class Node {
 }
 
 class Edge {
-  constructor(id, coordinates) {
-    this.id = id;
-    this.updateCoordinates(coordinates);
+  constructor(coordinates, start, end, id) {
+    this.id = id || getEdgeId();
+    if (start) {
+      this.start = start instanceof Node ? start : new Node(start);
+    } else {
+      this.start = new Node(coordinates[0]);
+    }
+    if (end) {
+      this.end = end instanceof Node ? end : new Node(end);
+    } else {
+      this.end = new Node(coordinates[coordinates.length - 1]);
+    }
+    this.start.addAdjacent(this.end.id);
+    this.end.addAdjacent(this.start.id);
+    this.setCoordinates(coordinates);
   }
   get type() {
-    return 'line';
+    return 'edge';
   }
-  updateCoordinates(coordinates) {
+  setStart(start) {
+    this.end.removeAdjacent(this.start.id);
+    this.start = start;
+    this.end.addAdjacent(this.start.id);
+  }
+  setEnd(end) {
+    this.start.removeAdjacent(this.end.id);
+    this.end = end;
+    this.start.addAdjacent(this.end.id);
+  }
+  setCoordinates(coordinates, start, end) {
     this.coordinates = [...coordinates];
     this.vertexCount = this.coordinates.length;
-    this.start = new Node(this.coordinates[0]);
-    this.end = new Node(this.coordinates[this.vertexCount - 1]);
     this._calculateBounds();
+    if (start) {
+      this.setStart(start);
+    }
+    if (end) {
+      this.setEnd(end);
+    }
   }
   clone() {
-    return new Edge(this.id, this.coordinates);
+    return new Edge(this.coordinates, this.start, this.end, this.id);
   }
   _calculateBounds() {
     const xs = this.coordinates.map(c => c[0]);
@@ -667,9 +770,9 @@ class EventEmitter {
 }
 
 class Network {
-  constructor(edges, maxEntries = 9) {
-    this._edgesTree = new rbush_1(maxEntries);
-    this._edgesIndex = 0;
+  constructor(maxEntries = 9, edges = []) {
+    resetIndices();
+    this._elementsTree = new rbush_1(maxEntries);
     this.events = new EventEmitter();
     if (edges) {
       for (let i = 0; i < edges.length; i++) {
@@ -681,17 +784,34 @@ class Network {
     let edges = json.features.map(f => {
       return f.geometry.coordinates;
     });
-    return new Network(edges, maxEntries);
+    return new Network(maxEntries, edges);
   }
-  all() {
-    return this._edgesTree.all();
+  toGeoJSON(name = 'Network', elementType) {
+    const elements = this.all(elementType);
+    return toGeoJSON(name, elements);
   }
-  getEdge(id) {
-    return this._edgesTree.all().filter(edge => edge.id === id)[0];
+  all(elementType) {
+    if (elementType) {
+      return this._elementsTree.all().filter(element => element.type === elementType);
+    } else {
+      return this._elementsTree.all();
+    }
+  }
+  getEdgeById(id) {
+    return this.all('edge').filter(edge => edge.id === id)[0];
+  }
+  getEdgesById(ids) {
+    return this.all('edge').filter(edge => ids.indexOf(edge.id) > -1);
+  }
+  findElementsAt(node, elementType) {
+    return this._elementsTree.search(node, elementType);
+  }
+  findElementsIn(bbox, elementType) {
+    return this._elementsTree.search(bbox, elementType);
   }
   findEdgesAt(coordinates) {
     const node = coordinates instanceof Node ? coordinates : new Node(coordinates);
-    return this._edgesTree.search(node);
+    return this.findElementsAt(node, 'edge').filter(e => e.type === 'edge');
   }
   findEdgesIn(bbox) {
     let searchBox = {};
@@ -706,24 +826,98 @@ class Network {
     } else {
       searchBox = bbox;
     }
-    return this._edgesTree.search(searchBox);
+    return this.findElementsIn(searchBox, 'edge').filter(e => e.type === 'edge');
   }
-  addEdge(coordinates) {
-    const edge = new Edge(++this._edgesIndex, coordinates);
-    this._edgesTree.insert(edge);
-    this._checkForIntersectionWithOtherEdges(edge);
+  findNodeAt(coordinates) {
+    return this.findNodesAt(coordinates)[0];
+  }
+  findNodesAt(coordinates) {
+    const node = coordinates instanceof Node ? coordinates : new Node(coordinates);
+    return this.findElementsAt(node, 'node').filter(e => e.type === 'node');
+  }
+  findNodesIn(bbox) {
+    let searchBox = {};
+    if (Array.isArray(bbox)) {
+      if (bbox.length !== 4) {
+        throw 'InvalidArgument: bbox must be defined as - [minX, minY, maxX, maxY]';
+      }
+      searchBox.minX = bbox[0];
+      searchBox.minY = bbox[1];
+      searchBox.maxX = bbox[2];
+      searchBox.maxY = bbox[3];
+    } else {
+      searchBox = bbox;
+    }
+    return this.findElementsIn(searchBox, 'node').filter(e => e.type === 'node');
+  }
+  connectEdge(edgeOrId) {
+    const edge = edgeOrId instanceof Edge ? edgeOrId : this.getEdgeById(edgeOrId);
+    if (!edge) {
+      throw `InvalidArgument: edge with ID: ${edgeOrId} was not found in the network`;
+    }
+    const edgesOnStart = this.findEdgesAt(edge.start).filter(e => e.id !== edge.id);
+    edgesOnStart.map(edgeOnStart => {
+      this._fillAdjacency(edge, edgeOnStart);
+    });
+    const edgesOnEnd = this.findEdgesAt(edge.end).filter(e => e.id !== edge.id);
+    edgesOnEnd.map(edgeOnEnd => {
+      this._fillAdjacency(edge, edgeOnEnd);
+    });
+  }
+  disconnectEdge(edgeOrId) {
+    const edge = edgeOrId instanceof Edge ? edgeOrId : this.getEdgeById(edgeOrId);
+    if (!edge) {
+      throw `InvalidArgument: edge with ID: ${edgeOrId} was not found in the network`;
+    }
+    let removeStartNode = true;
+    let removeEndNode = true;
+    const edgesOnStart = this.findEdgesAt(edge.start).filter(e => e.id !== edge.id);
+    edgesOnStart.map(edgeOnStart => {
+      this._clearAdjacency(edge, edgeOnStart);
+      removeStartNode = false;
+    });
+    const edgesOnEnd = this.findEdgesAt(edge.end).filter(e => e.id !== edge.id);
+    edgesOnEnd.map(edgeOnEnd => {
+      this._clearAdjacency(edge, edgeOnEnd);
+      removeEndNode = false;
+    });
+    return {
+      removeStartNode,
+      removeEndNode
+    };
+  }
+  removeOrphanNodes() {}
+  addEdge(coordinates, startNode, endNode) {
+    const edgeStartNode = startNode || this.findNodeAt(coordinates[0]),
+      edgeEndNode = endNode || this.findNodeAt(coordinates[coordinates.length - 1]);
+    const edge = new Edge(coordinates, edgeStartNode, edgeEndNode);
+    this._elementsTree.insert(edge);
+    this._elementsTree.insert(edge.start);
+    this._elementsTree.insert(edge.end);
+    this._processEdge(edge);
     this.events.emit(ADD_EDGE, edge);
     return edge;
   }
-  updateEdge(id, coordinates) {
-    const oldEdge = this.getEdge(id);
+  updateEdge(id, coordinates, startNode, endNode) {
+    const oldEdge = this.getEdgeById(id);
     if (!oldEdge) {
       throw `InvalidArgument: edge with ID: ${id} was not found in the network`;
     }
-    this._edgesTree.remove(oldEdge);
-    const updEdge = new Edge(oldEdge.id, coordinates);
-    this._edgesTree.insert(updEdge);
-    this._checkForIntersectionWithOtherEdges(updEdge, oldEdge);
+    let edgeStartNode = startNode || this.findNodesAt(coordinates[0])[0],
+      edgeEndNode = endNode || this.findNodesAt(coordinates[coordinates.length - 1])[0];
+    if (!edgeStartNode) {
+      edgeStartNode = oldEdge.start.clone();
+      edgeStartNode.setCoordinates(coordinates[0]);
+    }
+    if (!edgeEndNode) {
+      edgeEndNode = oldEdge.end.clone();
+      edgeEndNode.setCoordinates(coordinates[coordinates.length - 1]);
+    }
+    const updEdge = oldEdge.clone();
+    this._elementsTree.remove(oldEdge);
+    updEdge.setCoordinates(coordinates, edgeStartNode, edgeEndNode);
+    this._elementsTree.insert(updEdge);
+    this._processEdge(updEdge, oldEdge);
     this.events.emit(UPDATE_EDGE, oldEdge, updEdge);
     return updEdge;
   }
@@ -734,109 +928,143 @@ class Network {
     }
   }
   removeEdge(edge) {
-    if (this._edgesTree.remove(edge, this._equalityFunction)) {
+    if (this._elementsTree.remove(edge, this._equalityFunction)) {
+      const { removeStartNode, removeEndNode } = this.disconnectEdge(edge);
+      if (removeStartNode) {
+        this._elementsTree.remove(edge.start);
+      }
+      if (removeEndNode) {
+        this._elementsTree.remove(edge.end);
+      }
       this.events.emit(REMOVE_EDGE, edge);
     }
   }
   removeEdgeById(id) {
-    const edge = this.getEdge(id);
+    const edge = this.getEdgeById(id);
     if (!edge) {
       throw `InvalidArgument: edge with ID: ${id} was not found in the network`;
     }
-    if (this.removeEdge(edge)) {
-      this.events.emit(REMOVE_EDGE, edge);
-    }
-  }
-  toGeoJSON(name = 'Network') {
-    const features = [];
-    const edges = this.all();
-    for (let i = 0; i < edges.length; i++) {
-      let coordinates = [];
-      for (let j = 0; j < edges[i].coordinates.length; j++) {
-        const vertex = edges[i].coordinates[j];
-        coordinates.push(`[${vertex[0]},${vertex[1]}]`);
-      }
-      let text = `
-{
-  "type": "Feature",
-  "id": ${edges[i].id},
-  "geometry": {
-    "type": "LineString",
-    "coordinates": [
-      ${coordinates.join(',')}
-    ]
-  },
-  "properties": {
-    "minX": ${edges[i].minX},
-    "minY": ${edges[i].minY},
-    "maxX": ${edges[i].maxX},
-    "maxY": ${edges[i].maxY}
-  }
-}`;
-      features.push(text);
-    }
-    return `
-{
-  "type": "FeatureCollection",
-  "name": "${name}",
-  "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
-  "features": [${features.join(',')}]
-}`;
+    this.removeEdge(edge);
   }
   _equalityFunction(a, b) {
     return a.id === b.id;
   }
-  _checkForIntersectionWithOtherEdges(edge, oldEdge) {
+  _fillAdjacency(edge, other) {
+    if (nodesAreEqual(edge.start, other.start)) {
+      edge.start.addAdjacent(other.end);
+      other.start.addAdjacent(edge.end);
+    }
+    if (nodesAreEqual(edge.end, other.start)) {
+      edge.end.addAdjacent(other.end);
+      other.start.addAdjacent(edge.start);
+    }
+    if (nodesAreEqual(edge.start, other.end)) {
+      edge.start.addAdjacent(other.start);
+      other.end.addAdjacent(edge.end);
+    }
+    if (nodesAreEqual(edge.end, other.end)) {
+      edge.end.addAdjacent(other.start);
+      other.end.addAdjacent(edge.start);
+    }
+  }
+  _clearAdjacency(edge, other) {
+    if (nodesAreEqual(edge.start, other.start)) {
+      edge.start.removeAdjacent(other.end);
+      other.start.removeAdjacent(edge.end);
+    }
+    if (nodesAreEqual(edge.end, other.start)) {
+      edge.end.removeAdjacent(other.end);
+      other.start.removeAdjacent(edge.start);
+    }
+    if (nodesAreEqual(edge.start, other.end)) {
+      edge.start.removeAdjacent(other.start);
+      other.end.removeAdjacent(edge.end);
+    }
+    if (nodesAreEqual(edge.end, other.end)) {
+      edge.end.removeAdjacent(other.start);
+      other.end.removeAdjacent(edge.start);
+    }
+  }
+  _tryToSplitEdge(edge, splitPoint) {
+    const splitResult = split(edge.coordinates, splitPoint);
+    return splitResult;
+  }
+  _processEdge(edge, oldEdge) {
     const edgesOnStart = this.findEdgesAt(edge.start).filter(e => e.id !== edge.id);
     edgesOnStart.map(edgeOnStart => {
-      const splitResult = split(edgeOnStart.coordinates, edge.start.coordinates);
+      const splitResult = this._tryToSplitEdge(edgeOnStart, edge.start.coordinates);
       if (splitResult) {
-        this.updateEdge(edgeOnEnd.id, splitResult.firstCoordinates);
-        const edge = this.addEdge(splitResult.secondCoordinates);
-        this.events.emit(event.SPLIT_EDGE, edgeOnEnd, edge);
+        this.disconnectEdge(edgeOnStart);
+        let splitNode = this.findNodeAt(splitResult.secondCoordinates[0]);
+        if (!splitNode) {
+          splitNode = new Node(splitResult.secondCoordinates[0]);
+          this._elementsTree.insert(splitNode);
+        }
+        const updEdge = edgeOnStart.clone();
+        this._elementsTree.remove(edgeOnStart);
+        updEdge.setCoordinates(splitResult.firstCoordinates, edgeOnStart.start, splitNode);
+        this._elementsTree.insert(updEdge);
+        this.connectEdge(updEdge);
+        this.events.emit(UPDATE_EDGE, edgeOnStart, updEdge);
+        const newEdge = this.addEdge(splitResult.secondCoordinates, splitNode, edgeOnStart.start);
+        this.events.emit(SPLIT_EDGE, edgeOnStart, newEdge);
       }
     });
     const edgesOnEnd = this.findEdgesAt(edge.end).filter(e => e.id !== edge.id);
     edgesOnEnd.map(edgeOnEnd => {
-      const splitResult = split(edgeOnEnd.coordinates, edge.end.coordinates);
+      const splitResult = this._tryToSplitEdge(edgeOnEnd, edge.end.coordinates);
       if (splitResult) {
-        this.updateEdge(edgeOnEnd.id, splitResult.firstCoordinates);
-        const newEdge = this.addEdge(splitResult.secondCoordinates);
+        this.disconnectEdge(edgeOnEnd);
+        let splitNode = this.findNodeAt(splitResult.secondCoordinates[0]);
+        if (!splitNode) {
+          splitNode = new Node(splitResult.secondCoordinates[0]);
+          this._elementsTree.insert(splitNode);
+        }
+        const updEdge = edgeOnEnd.clone();
+        this._elementsTree.remove(edgeOnEnd);
+        updEdge.setCoordinates(splitResult.firstCoordinates, edgeOnEnd.start, splitNode);
+        this._elementsTree.insert(updEdge);
+        this.connectEdge(updEdge);
+        edgeOnEnd.end.removeAdjacent(updEdge.start);
+        updEdge.end.addAdjacent(edgeOnEnd.end);
+        this.events.emit(UPDATE_EDGE, edgeOnEnd, updEdge);
+        const newEdge = this.addEdge(splitResult.secondCoordinates, splitNode, edgeOnEnd.end);
         this.events.emit(SPLIT_EDGE, edgeOnEnd, newEdge);
       }
     });
+    this.connectEdge(edge);
     if (oldEdge) {
       const oldEdgeEdgesOnStart = this.findEdgesAt(oldEdge.start).filter(e => e.id !== oldEdge.id);
       oldEdgeEdgesOnStart.map(oldEdgeEdgeOnStart => {
-        if (coordinatesAreEqual(oldEdgeEdgeOnStart.start.coordinates, oldEdge.start.coordinates)) {
-          if (coordinatesAreEqual(oldEdgeEdgeOnStart.start.coordinates, edge.start.coordinates) === false) {
+        if (nodesAreEqual(oldEdgeEdgeOnStart.start, oldEdge.start)) {
+          if (nodesAreEqual(oldEdgeEdgeOnStart.start, edge.start) === false) {
             let coordinates = oldEdgeEdgeOnStart.coordinates;
             coordinates[0] = edge.start.coordinates;
-            this.updateEdge(oldEdgeEdgeOnStart.id, coordinates);
+            this.updateEdge(oldEdgeEdgeOnStart.id, coordinates, edge.start, oldEdgeEdgeOnStart.end);
           }
         }
-        if (coordinatesAreEqual(oldEdgeEdgeOnStart.end.coordinates, oldEdge.start.coordinates)) {
-          if (coordinatesAreEqual(oldEdgeEdgeOnStart.end.coordinates, edge.start.coordinates) === false) {
+        if (nodesAreEqual(oldEdgeEdgeOnStart.end, oldEdge.start)) {
+          if (nodesAreEqual(oldEdgeEdgeOnStart.end, edge.start) === false) {
             let coordinates = oldEdgeEdgeOnStart.coordinates;
             coordinates[oldEdgeEdgeOnStart.vertexCount - 1] = edge.start.coordinates;
-            this.updateEdge(oldEdgeEdgeOnStart.id, coordinates);
+            this.updateEdge(oldEdgeEdgeOnStart.id, coordinates, oldEdgeEdgeOnStart.start, edge.start);
           }
         }
       });
       const oldEdgeEdgesOnEnd = this.findEdgesAt(oldEdge.end).filter(e => e.id !== oldEdge.id);
       oldEdgeEdgesOnEnd.map(oldEdgeEdgeOnEnd => {
-        if (coordinatesAreEqual(oldEdgeEdgeOnEnd.start.coordinates, oldEdge.end.coordinates)) {
-          if (coordinatesAreEqual(oldEdgeEdgeOnEnd.start.coordinates, edge.end.coordinates) === false) {
+        if (nodesAreEqual(oldEdgeEdgeOnEnd.start, oldEdge.end)) {
+          if (nodesAreEqual(oldEdgeEdgeOnEnd.start, edge.end) === false) {
             let coordinates = oldEdgeEdgeOnEnd.coordinates;
             coordinates[0] = edge.end.coordinates;
-            this.updateEdge(oldEdgeEdgeOnEnd.id, coordinates);
+            this.updateEdge(oldEdgeEdgeOnEnd.id, coordinates, edge.end, oldEdgeEdgeOnEnd.end);
           }
         }
-        if (coordinatesAreEqual(oldEdgeEdgeOnEnd.end.coordinates, oldEdge.end.coordinates)) {
-          if (coordinatesAreEqual(oldEdgeEdgeOnEnd.end.coordinates, edge.end.coordinates) === false) {
+        if (nodesAreEqual(oldEdgeEdgeOnEnd.end, oldEdge.end)) {
+          if (nodesAreEqual(oldEdgeEdgeOnEnd.end, edge.end) === false) {
             let coordinates = oldEdgeEdgeOnEnd.coordinates;
             coordinates[oldEdgeEdgeOnEnd.vertexCount - 1] = edge.end.coordinates;
-            this.updateEdge(oldEdgeEdgeOnEnd.id, coordinates);
+            this.updateEdge(oldEdgeEdgeOnEnd.id, coordinates, oldEdgeEdgeOnEnd.start, edge.end);
           }
         }
       });

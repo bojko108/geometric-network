@@ -1,4 +1,4 @@
-import { getEdgeId } from '../helpers';
+import { getEdgeId } from '../Helpers';
 import Node from './Node';
 
 export default class Edge {
