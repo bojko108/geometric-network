@@ -124,6 +124,8 @@ export default class Network {
     for (let i = 0; i < edges.length; i++) {
       this._fillAdjacency(edge, edges[i]);
     }
+
+    this.events.emit(events.CONNECT_EDGE, edge);
   }
 
   disconnectEdge(edgeOrId) {
@@ -144,10 +146,13 @@ export default class Network {
     // let removeStartNode = this.findEdgesAt(edge.start).filter(e => e.id !== edge.id).length < 1;
     // let removeEndNode = this.findEdgesAt(edge.end).filter(e => e.id !== edge.id).length < 1;
 
-    return {
+    const result = {
       removeStartNode,
       removeEndNode
     };
+    this.events.emit(events.DISCONNECT_EDGE, edge, result);
+
+    return result;
   }
 
   addEdge(coordinates) {
@@ -156,10 +161,12 @@ export default class Network {
 
     if (!startNode) {
       startNode = new Node(coordinates[0]);
+      this.events.emit(events.ADD_NODE, startNode);
     }
 
     if (!endNode) {
       endNode = new Node(coordinates[coordinates.length - 1]);
+      this.events.emit(events.ADD_NODE, endNode);
     }
 
     const edge = new Edge(coordinates, startNode, endNode);
