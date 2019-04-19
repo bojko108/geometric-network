@@ -11,6 +11,8 @@ describe('Network Query tests', () => {
     network = Network.fromGeoJSON(data, 16);
     const json = network.toGeoJSON();
     assert.isDefined(json);
+    let a = JSON.stringify(json);
+    debugger;
   });
 
   it('Should get all elements from the network', () => {
