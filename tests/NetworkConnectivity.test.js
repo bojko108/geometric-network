@@ -22,7 +22,7 @@ describe('Network Connectivity tests', () => {
 
     assert.deepEqual(edge1.start.adjacent, []);
     assert.deepEqual(edge1.end.adjacent, [7]);
-
+    debugger;
     assert.isTrue(edge1.leaf);
     assert.isTrue(edge1.start.terminator);
     assert.isTrue(edge1.start.orphan);
@@ -41,8 +41,8 @@ describe('Network Connectivity tests', () => {
 
     assert.deepEqual(edge2.start.adjacent, [14, 17]);
     assert.deepEqual(edge2.end.adjacent, [3]);
-    // debugger;
-    // assert.isTrue(network.getEdgeById(1).leaf);
+    debugger;
+    assert.isTrue(network.getEdgeById(1).leaf);
     assert.isTrue(edge2.leaf);
     assert.isFalse(edge2.start.terminator);
     assert.isFalse(edge2.start.orphan);
@@ -160,7 +160,7 @@ describe('Network Connectivity tests', () => {
     assert.deepEqual(edge3.start.adjacent, [11]);
     assert.deepEqual(edge3.end.adjacent, [10]);
 
-    assert.isFalse(edge3.leaf);
+    assert.isTrue(edge3.leaf);
     assert.isTrue(edge3.start.terminator);
     assert.isFalse(edge3.start.orphan);
     assert.isTrue(edge3.end.terminator);

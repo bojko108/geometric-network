@@ -15,7 +15,7 @@ describe('Network Modifications tests', () => {
 
   it('Should add a new edge', () => {
     assert.equal(network.all().length, 0);
-
+    debugger;
     network.addEdge(data.features[0].geometry.coordinates);
     assert.equal(network.all().length, 3);
     assert.equal(network.all('edge').length, 1);
@@ -52,7 +52,7 @@ describe('Network Modifications tests', () => {
 
     assert.deepEqual(edge1.start.adjacent, [edge1.end.id]);
     assert.deepEqual(edge1.end.adjacent, [edge1.start.id]);
-    // assert.isTrue(edge1.leaf);
+    assert.isTrue(edge1.leaf);
   });
 
   it('Should add a new edge with start at existing node', () => {
@@ -160,9 +160,13 @@ describe('Network Modifications tests', () => {
 
   it('Should update all edges when start node is moved', () => {
     assert.equal(network.all().length, 0);
+
+    // except edge.leaf = true
   });
 
   it('Should update all edges when end node is moved', () => {
     assert.equal(network.all().length, 0);
+
+    // except edge.leaf = true
   });
 });

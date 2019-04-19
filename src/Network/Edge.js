@@ -43,7 +43,13 @@ export default class Edge {
    * @type {Boolean}
    */
   get leaf() {
-    return this.start.adjacent.indexOf(this.end.id) < 0 && this.end.adjacent.indexOf(this.start.id) < 0;
+    let leaf = this.start.adjacent.indexOf(this.end.id) === -1 && this.end.adjacent.indexOf(this.start.id) === -1;
+
+    if (leaf === false) {
+      leaf = this.start.terminator && this.end.terminator;
+    }
+
+    return leaf;
   }
 
   setStart(newStart) {

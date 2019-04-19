@@ -49,7 +49,7 @@ export default class Node {
    * @type {Boolean}
    */
   get terminator() {
-    return this._adjacent.length < 2;
+    return this.orphan === true || this._adjacent.length < 2;
   }
 
   /**
@@ -58,7 +58,7 @@ export default class Node {
    * @type {Boolean}
    */
   get orphan() {
-    return this._adjacent.length < 1;
+    return this._adjacent.length === 0;
   }
 
   /**
