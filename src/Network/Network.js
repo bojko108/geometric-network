@@ -21,11 +21,14 @@ export default class Network {
     }
   }
 
-  static fromGeoJSON(json, maxEntries = 9) {
+  addFromGeoJSON(json) {
     let edges = json.features.map(f => {
       return f.geometry.coordinates;
     });
-    return new Network(maxEntries, edges);
+
+    for (let i = 0; i < edges.length; i++) {
+      this.addEdge(edges[i]);
+    }
   }
 
   toGeoJSON(name = 'Network', elementType) {

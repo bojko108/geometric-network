@@ -1,5 +1,5 @@
 /** 
- * geometric-network - v1.1.0
+ * geometric-network - v1.1.1
  * description: Library for creating and managing geometric networks
  * author: bojko108 <bojko108@gmail.com>
  * 
@@ -630,6 +630,12 @@ class Node {
   get adjacent() {
     return this._adjacent;
   }
+  get terminator() {
+    return this.orphan === true || this._adjacent.length < 2;
+  }
+  get orphan() {
+    return this._adjacent.length === 0;
+  }
   addAdjacent(nodeOrId) {
     const id = nodeOrId instanceof Node ? nodeOrId.id : nodeOrId;
     if (this._adjacent.indexOf(id) < 0) {
@@ -647,9 +653,6 @@ class Node {
     this.coordinates = [...coordinates];
     this._calculateBounds();
   }
-  clone() {
-    return new Node(this.coordinates);
-  }
   _calculateBounds() {
     this.minX = this.coordinates[0];
     this.minY = this.coordinates[1];
@@ -661,16 +664,8 @@ class Node {
 class Edge {
   constructor(coordinates, start, end, id) {
     this.id = id || getEdgeId();
-    if (start) {
-      this.start = start instanceof Node ? start : new Node(start);
-    } else {
-      this.start = new Node(coordinates[0]);
-    }
-    if (end) {
-      this.end = end instanceof Node ? end : new Node(end);
-    } else {
-      this.end = new Node(coordinates[coordinates.length - 1]);
-    }
+    this.start = start;
+    this.end = end;
     this.start.addAdjacent(this.end.id);
     this.end.addAdjacent(this.start.id);
     this.setCoordinates(coordinates);
@@ -678,29 +673,38 @@ class Edge {
   get type() {
     return 'edge';
   }
-  setStart(start) {
+  get leaf() {
+    let leaf = this.start.adjacent.indexOf(this.end.id) === -1 && this.end.adjacent.indexOf(this.start.id) === -1;
+    if (leaf === false) {
+      leaf = this.start.terminator && this.end.terminator;
+    }
+    return leaf;
+  }
+  setStart(newStart) {
     this.end.removeAdjacent(this.start.id);
-    this.start = start;
-    this.end.addAdjacent(this.start.id);
-  }
-  setEnd(end) {
     this.start.removeAdjacent(this.end.id);
-    this.end = end;
+    this.start = newStart;
     this.start.addAdjacent(this.end.id);
+    this.end.addAdjacent(this.start.id);
+    this.coordinates[0] = this.start.coordinates;
+    this._calculateBounds();
   }
-  setCoordinates(coordinates, start, end) {
+  setEnd(newEnd) {
+    this.start.removeAdjacent(this.end.id);
+    this.end.removeAdjacent(this.start.id);
+    this.end = newEnd;
+    this.end.addAdjacent(this.start.id);
+    this.start.addAdjacent(this.end.id);
+    this.coordinates[this.vertexCount - 1] = this.end.coordinates;
+    this._calculateBounds();
+  }
+  setCoordinates(coordinates) {
     this.coordinates = [...coordinates];
     this.vertexCount = this.coordinates.length;
     this._calculateBounds();
-    if (start) {
-      this.setStart(start);
-    }
-    if (end) {
-      this.setEnd(end);
-    }
   }
-  clone() {
-    return new Edge(this.coordinates, this.start, this.end, this.id);
+  clone(resetId = true) {
+    return new Edge(this.coordinates, this.start, this.end, resetId ? getEdgeId() : this.id);
   }
   _calculateBounds() {
     const xs = this.coordinates.map(c => c[0]);
@@ -780,11 +784,13 @@ class Network {
       }
     }
   }
-  static fromGeoJSON(json, maxEntries = 9) {
+  addFromGeoJSON(json) {
     let edges = json.features.map(f => {
       return f.geometry.coordinates;
     });
-    return new Network(maxEntries, edges);
+    for (let i = 0; i < edges.length; i++) {
+      this.addEdge(edges[i]);
+    }
   }
   toGeoJSON(name = 'Network', elementType) {
     const elements = this.all(elementType);
@@ -855,49 +861,103 @@ class Network {
     if (!edge) {
       throw `InvalidArgument: edge with ID: ${edgeOrId} was not found in the network`;
     }
-    const edgesOnStart = this.findEdgesAt(edge.start).filter(e => e.id !== edge.id);
-    edgesOnStart.map(edgeOnStart => {
-      this._fillAdjacency(edge, edgeOnStart);
-    });
-    const edgesOnEnd = this.findEdgesAt(edge.end).filter(e => e.id !== edge.id);
-    edgesOnEnd.map(edgeOnEnd => {
-      this._fillAdjacency(edge, edgeOnEnd);
-    });
+    edge.start.addAdjacent(edge.end);
+    edge.end.addAdjacent(edge.start);
+    let edges = this.findEdgesAt(edge.start).filter(e => e.id !== edge.id);
+    for (let i = 0; i < edges.length; i++) {
+      this._fillAdjacency(edge, edges[i]);
+    }
+    edges = this.findEdgesAt(edge.end).filter(e => e.id !== edge.id);
+    for (let i = 0; i < edges.length; i++) {
+      this._fillAdjacency(edge, edges[i]);
+    }
   }
   disconnectEdge(edgeOrId) {
     const edge = edgeOrId instanceof Edge ? edgeOrId : this.getEdgeById(edgeOrId);
     if (!edge) {
       throw `InvalidArgument: edge with ID: ${edgeOrId} was not found in the network`;
     }
-    let removeStartNode = true;
-    let removeEndNode = true;
-    const edgesOnStart = this.findEdgesAt(edge.start).filter(e => e.id !== edge.id);
-    edgesOnStart.map(edgeOnStart => {
-      this._clearAdjacency(edge, edgeOnStart);
-      removeStartNode = false;
-    });
-    const edgesOnEnd = this.findEdgesAt(edge.end).filter(e => e.id !== edge.id);
-    edgesOnEnd.map(edgeOnEnd => {
-      this._clearAdjacency(edge, edgeOnEnd);
-      removeEndNode = false;
-    });
+    edge.start.removeAdjacent(edge.end);
+    edge.end.removeAdjacent(edge.start);
+    let removeStartNode = edge.start.orphan;
+    let removeEndNode = edge.end.orphan;
     return {
       removeStartNode,
       removeEndNode
     };
   }
-  removeOrphanNodes() {}
-  addEdge(coordinates, startNode, endNode) {
-    const edgeStartNode = startNode || this.findNodeAt(coordinates[0]),
-      edgeEndNode = endNode || this.findNodeAt(coordinates[coordinates.length - 1]);
-    const edge = new Edge(coordinates, edgeStartNode, edgeEndNode);
+  addEdge(coordinates) {
+    let startNode = this.findNodeAt(coordinates[0]),
+      endNode = this.findNodeAt(coordinates[coordinates.length - 1]);
+    if (!startNode) {
+      startNode = new Node(coordinates[0]);
+    }
+    if (!endNode) {
+      endNode = new Node(coordinates[coordinates.length - 1]);
+    }
+    const edge = new Edge(coordinates, startNode, endNode);
     this._elementsTree.insert(edge);
     this._elementsTree.insert(edge.start);
     this._elementsTree.insert(edge.end);
-    this._processEdge(edge);
+    let edges = this.findEdgesAt(edge.start).filter(e => e.id !== edge.id);
+    for (let i = 0; i < edges.length; i++) {
+      const edgeAtStart = edges[i];
+      const splitResult = split(edgeAtStart.coordinates, edge.start.coordinates);
+      if (splitResult) {
+        const oldCoordinates = [...edgeAtStart.coordinates];
+        this.disconnectEdge(edgeAtStart);
+        this._elementsTree.remove(edgeAtStart);
+        edgeAtStart.setEnd(edge.start);
+        edgeAtStart.setCoordinates(splitResult.firstCoordinates);
+        this._elementsTree.insert(edgeAtStart);
+        this.connectEdge(edgeAtStart);
+        this.events.emit(UPDATE_EDGE, oldCoordinates, edgeAtStart);
+        const newEdge = this.addEdge(splitResult.secondCoordinates, edge.start, edgeAtStart.end);
+        this.events.emit(SPLIT_EDGE, oldCoordinates, edgeAtStart, newEdge);
+      }
+    }
+    edges = this.findEdgesAt(edge.end).filter(e => e.id !== edge.id);
+    for (let i = 0; i < edges.length; i++) {
+      const edgeAtEnd = edges[i];
+      const splitResult = split(edgeAtEnd.coordinates, edge.end.coordinates);
+      if (splitResult) {
+        const oldCoordinates = [...edgeAtEnd.coordinates];
+        this.disconnectEdge(edgeAtEnd);
+        this._elementsTree.remove(edgeAtEnd);
+        edgeAtEnd.setEnd(edge.end);
+        edgeAtEnd.setCoordinates(splitResult.firstCoordinates);
+        this._elementsTree.insert(edgeAtEnd);
+        this.connectEdge(edgeAtEnd);
+        this.events.emit(UPDATE_EDGE, oldCoordinates, edgeAtEnd);
+        const newEdge = this.addEdge(splitResult.secondCoordinates, edge.end, edgeAtEnd.end);
+        this.events.emit(SPLIT_EDGE, oldCoordinates, edgeAtEnd, newEdge);
+      }
+    }
     this.events.emit(ADD_EDGE, edge);
     return edge;
   }
+  removeEdgeById(id) {
+    const edge = this.getEdgeById(id);
+    if (!edge) {
+      throw `InvalidArgument: edge with ID: ${id} was not found in the network`;
+    }
+    return this.removeEdge(edge);
+  }
+  removeEdge(edge) {
+    if (this._elementsTree.remove(edge, this._equalityFunction)) {
+      const { removeStartNode, removeEndNode } = this.disconnectEdge(edge);
+      if (removeStartNode) {
+        this._elementsTree.remove(edge.start);
+      }
+      if (removeEndNode) {
+        this._elementsTree.remove(edge.end);
+      }
+      this.events.emit(REMOVE_EDGE, edge);
+      return true;
+    }
+    return false;
+  }
+  removeOrphanNodes() {}
   updateEdge(id, coordinates, startNode, endNode) {
     const oldEdge = this.getEdgeById(id);
     if (!oldEdge) {
@@ -921,68 +981,39 @@ class Network {
     this.events.emit(UPDATE_EDGE, oldEdge, updEdge);
     return updEdge;
   }
-  removeEdges(coordinates) {
-    const edges = this.findEdgesAt(coordinates);
-    for (let i = 0; i < edges.length; i++) {
-      this.removeEdge(edges[i]);
-    }
-  }
-  removeEdge(edge) {
-    if (this._elementsTree.remove(edge, this._equalityFunction)) {
-      const { removeStartNode, removeEndNode } = this.disconnectEdge(edge);
-      if (removeStartNode) {
-        this._elementsTree.remove(edge.start);
-      }
-      if (removeEndNode) {
-        this._elementsTree.remove(edge.end);
-      }
-      this.events.emit(REMOVE_EDGE, edge);
-    }
-  }
-  removeEdgeById(id) {
-    const edge = this.getEdgeById(id);
-    if (!edge) {
-      throw `InvalidArgument: edge with ID: ${id} was not found in the network`;
-    }
-    this.removeEdge(edge);
-  }
   _equalityFunction(a, b) {
     return a.id === b.id;
   }
   _fillAdjacency(edge, other) {
-    if (nodesAreEqual(edge.start, other.start)) {
+    if (edge.start === other.start) {
       edge.start.addAdjacent(other.end);
       other.start.addAdjacent(edge.end);
     }
-    if (nodesAreEqual(edge.end, other.start)) {
+    if (edge.end === other.start) {
       edge.end.addAdjacent(other.end);
       other.start.addAdjacent(edge.start);
     }
-    if (nodesAreEqual(edge.start, other.end)) {
+    if (edge.start === other.end) {
       edge.start.addAdjacent(other.start);
       other.end.addAdjacent(edge.end);
     }
-    if (nodesAreEqual(edge.end, other.end)) {
+    if (edge.end === other.end) {
       edge.end.addAdjacent(other.start);
       other.end.addAdjacent(edge.start);
     }
   }
   _clearAdjacency(edge, other) {
-    if (nodesAreEqual(edge.start, other.start)) {
+    if (edge.start === other.start) {
       edge.start.removeAdjacent(other.end);
-      other.start.removeAdjacent(edge.end);
     }
-    if (nodesAreEqual(edge.end, other.start)) {
+    if (edge.end === other.start) {
       edge.end.removeAdjacent(other.end);
-      other.start.removeAdjacent(edge.start);
     }
-    if (nodesAreEqual(edge.start, other.end)) {
+    if (edge.start === other.end) {
       edge.start.removeAdjacent(other.start);
-      other.end.removeAdjacent(edge.end);
     }
-    if (nodesAreEqual(edge.end, other.end)) {
+    if (edge.end === other.end) {
       edge.end.removeAdjacent(other.start);
-      other.end.removeAdjacent(edge.start);
     }
   }
   _tryToSplitEdge(edge, splitPoint) {

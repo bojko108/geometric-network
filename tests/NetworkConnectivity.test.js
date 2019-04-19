@@ -6,7 +6,8 @@ describe('Network Connectivity tests', () => {
   let network;
 
   beforeEach(() => {
-    network = Network.fromGeoJSON(data, 16);
+    network = new Network(16);
+    network.addFromGeoJSON(data);
     const json = network.toGeoJSON();
     assert.isDefined(json);
   });

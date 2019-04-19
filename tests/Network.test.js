@@ -13,14 +13,16 @@ describe('Network tests', () => {
   });
 
   it('Should create a network from GeoJSON', () => {
-    const network = Network.fromGeoJSON(data, 16);
+    const network = new Network([], 16);
+    network.addFromGeoJSON(data);
     assert.isDefined(network);
     const elements = network.all('edge');
     assert.equal(elements.length, data.features.length);
   });
 
   it('Should export the network in GeoJSON', () => {
-    const network = Network.fromGeoJSON(data, 16);
+    const network = new Network([], 16);
+    network.addFromGeoJSON(data);
     const elements = network.all();
     const json = network.toGeoJSON('network');
     assert.isDefined(json);
