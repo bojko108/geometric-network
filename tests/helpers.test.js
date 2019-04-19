@@ -1,5 +1,5 @@
 import { assert } from 'chai';
-import { getNodeId, getEdgeId, coordinatesAreEqual, nodesAreEqual, isOnSegment, split } from '../src/helpers';
+import { getNodeId, getEdgeId, coordinatesAreEqual, nodesAreEqual, isOnSegment, split } from '../src/Helpers';
 import Node from '../src/Network/Node';
 
 describe('Helpers tests', () => {

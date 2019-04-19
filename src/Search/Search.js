@@ -1,5 +1,5 @@
 //https://medium.com/@adriennetjohnson/a-walkthrough-of-dijkstras-algorithm-in-javascript-e94b74192026
-import { coordinatesAreEqual } from '../helpers';
+import { coordinatesAreEqual } from '../Helpers';
 
 export const findPath = (s, endNode, graph) => {
   debugger;

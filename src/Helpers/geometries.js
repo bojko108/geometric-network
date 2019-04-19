@@ -1,14 +1,3 @@
-let nodesIdIndex = 0;
-let edgesIdIndex = 0;
-
-export const getNodeId = () => {
-  return ++nodesIdIndex;
-};
-
-export const getEdgeId = () => {
-  return ++edgesIdIndex;
-};
-
 export const coordinatesAreEqual = (a, b) => {
   return Math.abs(a[0] - b[0]) < Number.EPSILON && Math.abs(a[1] - b[1]) < Number.EPSILON;
   // return a[0] === b[0] && a[1] === b[1];
@@ -69,24 +58,3 @@ export const split = (lineCoordinates, point) => {
     return { splitIndex: splitIndex, firstCoordinates, secondCoordinates };
   }
 };
-
-// export const isOnSegment = (segment, point) => {
-//   // The cross product of `point -> start` and `start -> end` should equal zero.
-
-//   const dxc = point[0] - segment[0][0];
-//   const dyc = point[1] - segment[0][1];
-//   const dxl = segment[1][0] - segment[0][0];
-//   const dyl = segment[1][1] - segment[0][1];
-
-//   const cross = dxc * dyl - dyc * dxl;
-
-//   if (cross === 0) {
-//     if (Math.abs(dxl) >= Math.abs(dyl)) {
-//       return dxl > 0 ? segment[0][0] <= point[0] && point[0] <= segment[1][0] : segment[1][0] <= point[0] && point[0] <= segment[0][0];
-//     } else {
-//       return dyl > 0 ? segment[0][1] <= point[1] && point[1] <= segment[1][1] : segment[1][1] <= point[1] && point[1] <= segment[0][1];
-//     }
-//   } else {
-//     return false;
-//   }
-// }
