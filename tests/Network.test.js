@@ -13,7 +13,7 @@ describe('Network tests', () => {
   });
 
   it('Should create a network from GeoJSON', () => {
-    const network = new Network([], 16);
+    const network = new Network(16);
     network.addFromGeoJSON(data);
     assert.isDefined(network);
     const elements = network.all('edge');
@@ -21,10 +21,12 @@ describe('Network tests', () => {
   });
 
   it('Should export the network in GeoJSON', () => {
-    const network = new Network([], 16);
+    const network = new Network(16);
     network.addFromGeoJSON(data);
     const elements = network.all();
     const json = network.toGeoJSON('network');
+    // let a = JSON.stringify(json);
+    // debugger;
     assert.isDefined(json);
     assert.equal(json.type, 'FeatureCollection');
     assert.equal(json.name, 'network');

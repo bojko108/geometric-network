@@ -1,5 +1,5 @@
 /** 
- * geometric-network - v1.1.1
+ * geometric-network - v1.1.0
  * description: Library for creating and managing geometric networks
  * author: bojko108 <bojko108@gmail.com>
  * 
@@ -541,6 +541,9 @@ const toFeature = element => {
     geometry: geometry,
     properties: {
       fid: element.id,
+      leaf: element.type === 'edge' ? element.leaf : false,
+      terminator: element.type === 'node' ? element.terminator : false,
+      orphan: element.type === 'node' ? element.orphan : false,
       adjacent: element.type === 'node' ? element.adjacent.join(';') : '',
       minX: element.minX,
       minY: element.minY,
@@ -719,6 +722,11 @@ class Edge {
 const ADD_EDGE = 'ADD_EDGE';
 const REMOVE_EDGE = 'REMOVE_EDGE';
 const UPDATE_EDGE = 'UPDATE_EDGE';
+const ADD_NODE = 'ADD_NODE';
+const REMOVE_NODE = 'REMOVE_NODE';
+const UPDATE_NODE = 'UPDATE_NODE';
+const CONNECT_EDGE = 'CONNECT_EDGE';
+const DISCONNECT_EDGE = 'DISCONNECT_EDGE';
 const SPLIT_EDGE = 'SPLIT_EDGE';
 
 
@@ -726,6 +734,11 @@ var Events = Object.freeze({
 	ADD_EDGE: ADD_EDGE,
 	REMOVE_EDGE: REMOVE_EDGE,
 	UPDATE_EDGE: UPDATE_EDGE,
+	ADD_NODE: ADD_NODE,
+	REMOVE_NODE: REMOVE_NODE,
+	UPDATE_NODE: UPDATE_NODE,
+	CONNECT_EDGE: CONNECT_EDGE,
+	DISCONNECT_EDGE: DISCONNECT_EDGE,
 	SPLIT_EDGE: SPLIT_EDGE
 });
 
@@ -871,6 +884,7 @@ class Network {
     for (let i = 0; i < edges.length; i++) {
       this._fillAdjacency(edge, edges[i]);
     }
+    this.events.emit(CONNECT_EDGE, edge);
   }
   disconnectEdge(edgeOrId) {
     const edge = edgeOrId instanceof Edge ? edgeOrId : this.getEdgeById(edgeOrId);
@@ -881,19 +895,23 @@ class Network {
     edge.end.removeAdjacent(edge.start);
     let removeStartNode = edge.start.orphan;
     let removeEndNode = edge.end.orphan;
-    return {
+    const result = {
       removeStartNode,
       removeEndNode
     };
+    this.events.emit(DISCONNECT_EDGE, edge, result);
+    return result;
   }
   addEdge(coordinates) {
     let startNode = this.findNodeAt(coordinates[0]),
       endNode = this.findNodeAt(coordinates[coordinates.length - 1]);
     if (!startNode) {
       startNode = new Node(coordinates[0]);
+      this.events.emit(ADD_NODE, startNode);
     }
     if (!endNode) {
       endNode = new Node(coordinates[coordinates.length - 1]);
+      this.events.emit(ADD_NODE, endNode);
     }
     const edge = new Edge(coordinates, startNode, endNode);
     this._elementsTree.insert(edge);

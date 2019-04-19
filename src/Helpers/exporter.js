@@ -20,6 +20,9 @@ const toFeature = element => {
     geometry: geometry,
     properties: {
       fid: element.id,
+      leaf: element.type === 'edge' ? element.leaf : false,
+      terminator: element.type === 'node' ? element.terminator : false,
+      orphan: element.type === 'node' ? element.orphan : false,
       adjacent: element.type === 'node' ? element.adjacent.join(';') : '',
       minX: element.minX,
       minY: element.minY,
