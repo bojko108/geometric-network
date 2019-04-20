@@ -61,7 +61,7 @@ export default class Network {
   }
 
   findEdgesAt(coordinates) {
-    const node = coordinates instanceof Node ? coordinates : new Node(coordinates);
+    const node = coordinates instanceof Node ? coordinates : new Node(coordinates, -1);
     return this.findElementsAt(node, 'edge').filter(e => e.type === 'edge');
   }
 
@@ -86,7 +86,8 @@ export default class Network {
   }
 
   findNodesAt(coordinates) {
-    const node = coordinates instanceof Node ? coordinates : new Node(coordinates);
+    debugger;
+    const node = coordinates instanceof Node ? coordinates : new Node(coordinates, -1); // WTF!!!
     return this.findElementsAt(node, 'node').filter(e => e.type === 'node');
   }
 
@@ -155,18 +156,29 @@ export default class Network {
     return result;
   }
 
+  addNode(coordinates) {
+    if (coordinates.length !== 2) {
+      throw `InvalidArgument: addNode() - coordinates must be in format [x, y]`;
+    }
+    const node = new Node(coordinates);
+    this.events.emit(events.ADD_NODE, node);
+    return node;
+  }
+
   addEdge(coordinates) {
+    if (coordinates.length < 2) {
+      throw `InvalidArgument: addEdge() - coordinates must be in format [[x1, y1], [x2, y2], ...]`;
+    }
+
     let startNode = this.findNodeAt(coordinates[0]),
       endNode = this.findNodeAt(coordinates[coordinates.length - 1]);
 
     if (!startNode) {
-      startNode = new Node(coordinates[0]);
-      this.events.emit(events.ADD_NODE, startNode);
+      startNode = this.addNode(coordinates[0]);
     }
 
     if (!endNode) {
-      endNode = new Node(coordinates[coordinates.length - 1]);
-      this.events.emit(events.ADD_NODE, endNode);
+      endNode = this.addNode(coordinates[coordinates.length - 1]);
     }
 
     const edge = new Edge(coordinates, startNode, endNode);
@@ -410,7 +422,7 @@ export default class Network {
 
         let splitNode = this.findNodeAt(splitResult.secondCoordinates[0]);
         if (!splitNode) {
-          splitNode = new Node(splitResult.secondCoordinates[0]);
+          splitNode = this.addNode(splitResult.secondCoordinates[0]);
           this._elementsTree.insert(splitNode);
         }
 
@@ -443,7 +455,7 @@ export default class Network {
 
         let splitNode = this.findNodeAt(splitResult.secondCoordinates[0]);
         if (!splitNode) {
-          splitNode = new Node(splitResult.secondCoordinates[0]);
+          splitNode = this.addNode(splitResult.secondCoordinates[0]);
           this._elementsTree.insert(splitNode);
         }
 

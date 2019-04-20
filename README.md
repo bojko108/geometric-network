@@ -1,3 +1,10 @@
+# v2.0!
+
+- [] Update connected edges (what about leaf edges?)
+- [] Remove edges
+- [] Test events
+- [] Update docs
+
 # Geometric Network
 
 Library for creating and managing geometric networks. This library can be usd for managing features participating in a network. All upates to the geometry of the features inside the network are managed internaly and the connectivity between the elements is checked. You can add/remove/update/split elements using the appropriate methods.
@@ -33,8 +40,11 @@ network.events.on(events.ADD_EDGE, callback);
 ```
 
 ### ADD_EDGE event
+
 ### REMOVE_EDGE event
+
 ### UPDATE_EDGE event
+
 ### SPLIT_EDGE event
 
 ## Creating a network

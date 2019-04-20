@@ -12,6 +12,7 @@ describe('Node tests', () => {
   it('Should create a node', () => {
     assert.isDefined(node);
     assert.equal(node.type, 'node');
+    assert.isTrue(node.orphan);
     assert.equal(node.x, coordinates[0]);
     assert.equal(node.y, coordinates[1]);
     assert.equal(node.maxX, coordinates[0]);
@@ -26,6 +27,7 @@ describe('Node tests', () => {
 
     assert.isDefined(node);
     assert.equal(node.type, 'node');
+    assert.isTrue(node.orphan);
     assert.equal(node.x, newCoordinates[0]);
     assert.equal(node.y, newCoordinates[1]);
     assert.equal(node.maxX, newCoordinates[0]);

@@ -1,12 +1,10 @@
 import { getNodeId } from '../Helpers';
 
 export default class Node {
-  constructor(coordinates) {
-    this.id = getNodeId();
+  constructor(coordinates, id) {
+    this.id = id || getNodeId();
     this._adjacent = [];
     this.setCoordinates(coordinates);
-
-    // this.leaf = true;
   }
 
   /**

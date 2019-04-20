@@ -13,13 +13,20 @@ describe('Edge tests', () => {
 
   beforeEach(() => {
     let startNode = new Node(coordinates[0]);
+    assert.isTrue(startNode.orphan);
     let endNode = new Node(coordinates[coordinates.length - 1]);
+    assert.isTrue(endNode.orphan);
     edge = new Edge(coordinates, startNode, endNode);
+    assert.isTrue(edge.leaf);
+    assert.equal(startNode, edge.start);
+    assert.equal(endNode, edge.end);
   });
 
   it('Should create an edge', () => {
     assert.isDefined(edge);
     assert.equal(edge.type, 'edge');
+    assert.isFalse(edge.start.orphan);
+    assert.isFalse(edge.end.orphan);
     assert.equal(edge.coordinates.length, coordinates.length);
     assert.equal(edge.maxX, maxX);
     assert.equal(edge.minX, minX);
