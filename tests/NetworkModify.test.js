@@ -37,7 +37,7 @@ describe('Network Modifications tests', () => {
     assert.equal(network.all().length, 12);
     assert.equal(network.all('edge').length, 5);
     assert.equal(network.all('node').length, 7);
-
+    debugger;
     network.removeEdgeById(2);
     assert.equal(network.all().length, 11);
     assert.equal(network.all('edge').length, 4);

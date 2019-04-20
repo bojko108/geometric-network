@@ -616,8 +616,8 @@ const split = (lineCoordinates, point) => {
 };
 
 class Node {
-  constructor(coordinates) {
-    this.id = getNodeId();
+  constructor(coordinates, id) {
+    this.id = id || getNodeId();
     this._adjacent = [];
     this.setCoordinates(coordinates);
   }
@@ -829,7 +829,7 @@ class Network {
     return this._elementsTree.search(bbox, elementType);
   }
   findEdgesAt(coordinates) {
-    const node = coordinates instanceof Node ? coordinates : new Node(coordinates);
+    const node = coordinates instanceof Node ? coordinates : new Node(coordinates, -1);
     return this.findElementsAt(node, 'edge').filter(e => e.type === 'edge');
   }
   findEdgesIn(bbox) {
@@ -851,7 +851,7 @@ class Network {
     return this.findNodesAt(coordinates)[0];
   }
   findNodesAt(coordinates) {
-    const node = coordinates instanceof Node ? coordinates : new Node(coordinates);
+    const node = coordinates instanceof Node ? coordinates : new Node(coordinates, -1);
     return this.findElementsAt(node, 'node').filter(e => e.type === 'node');
   }
   findNodesIn(bbox) {
@@ -902,16 +902,25 @@ class Network {
     this.events.emit(DISCONNECT_EDGE, edge, result);
     return result;
   }
+  addNode(coordinates) {
+    if (coordinates.length !== 2) {
+      throw `InvalidArgument: addNode() - coordinates must be in format [x, y]`;
+    }
+    const node = new Node(coordinates);
+    this.events.emit(ADD_NODE, node);
+    return node;
+  }
   addEdge(coordinates) {
+    if (coordinates.length < 2) {
+      throw `InvalidArgument: addEdge() - coordinates must be in format [[x1, y1], [x2, y2], ...]`;
+    }
     let startNode = this.findNodeAt(coordinates[0]),
       endNode = this.findNodeAt(coordinates[coordinates.length - 1]);
     if (!startNode) {
-      startNode = new Node(coordinates[0]);
-      this.events.emit(ADD_NODE, startNode);
+      startNode = this.addNode(coordinates[0]);
     }
     if (!endNode) {
-      endNode = new Node(coordinates[coordinates.length - 1]);
-      this.events.emit(ADD_NODE, endNode);
+      endNode = this.addNode(coordinates[coordinates.length - 1]);
     }
     const edge = new Edge(coordinates, startNode, endNode);
     this._elementsTree.insert(edge);
@@ -1000,7 +1009,7 @@ class Network {
     return updEdge;
   }
   _equalityFunction(a, b) {
-    return a.id === b.id;
+    return a.id === b.id && a.type === b.type;
   }
   _fillAdjacency(edge, other) {
     if (edge.start === other.start) {
@@ -1046,7 +1055,7 @@ class Network {
         this.disconnectEdge(edgeOnStart);
         let splitNode = this.findNodeAt(splitResult.secondCoordinates[0]);
         if (!splitNode) {
-          splitNode = new Node(splitResult.secondCoordinates[0]);
+          splitNode = this.addNode(splitResult.secondCoordinates[0]);
           this._elementsTree.insert(splitNode);
         }
         const updEdge = edgeOnStart.clone();
@@ -1066,7 +1075,7 @@ class Network {
         this.disconnectEdge(edgeOnEnd);
         let splitNode = this.findNodeAt(splitResult.secondCoordinates[0]);
         if (!splitNode) {
-          splitNode = new Node(splitResult.secondCoordinates[0]);
+          splitNode = this.addNode(splitResult.secondCoordinates[0]);
           this._elementsTree.insert(splitNode);
         }
         const updEdge = edgeOnEnd.clone();

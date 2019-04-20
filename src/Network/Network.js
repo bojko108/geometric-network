@@ -86,7 +86,6 @@ export default class Network {
   }
 
   findNodesAt(coordinates) {
-    debugger;
     const node = coordinates instanceof Node ? coordinates : new Node(coordinates, -1); // WTF!!!
     return this.findElementsAt(node, 'node').filter(e => e.type === 'node');
   }
@@ -354,7 +353,7 @@ export default class Network {
   }
 
   _equalityFunction(a, b) {
-    return a.id === b.id;
+    return a.id === b.id && a.type === b.type;
   }
 
   _fillAdjacency(edge, other) {
