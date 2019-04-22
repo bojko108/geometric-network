@@ -1,5 +1,5 @@
 import { assert } from 'chai';
-import { getNodeId, getEdgeId, coordinatesAreEqual, nodesAreEqual, isOnSegment, split } from '../src/Helpers';
+import { getNodeId, getEdgeId, coordinatesAreEqual, nodesAreEqual, isOnSegment, split, getLength } from '../src/Helpers';
 import Node from '../src/Network/Node';
 
 describe('Helpers tests', () => {
@@ -97,6 +97,25 @@ describe('Helpers tests', () => {
     assert.isTrue(isOnSegment(segment, point));
     point = [23.9246537794989, 42.131153928789807];
     assert.isTrue(isOnSegment(segment, point));
+  });
+
+  it('Should calculate length of a line', () => {
+    let line = [
+      [23.900385116773919, 42.120830691660522],
+      [23.903282867547048, 42.138760524569278],
+      [23.913424995253013, 42.150894855931774],
+      [23.930630390468483, 42.146729339195396]
+    ];
+    let length = getLength(line);
+    assert.isTrue(Math.abs(length - 0.0516796474890469) < Number.EPSILON);
+
+    line = [[23.990385361315976, 42.18143922833228], [23.952725740113618, 42.167194704030642]];
+    length = getLength(line);
+    assert.isTrue(Math.abs(length - 0.0402635510317346) < Number.EPSILON);
+
+    line = [[23.959789007623126, 42.143288260152296], [23.942764721830976, 42.133689460716298], [23.9246537794989, 42.131153928789807]];
+    length = getLength(line);
+    assert.isTrue(Math.abs(length - 0.037831448603633) < Number.EPSILON);
   });
 
   it('Should split line at coordinates', () => {

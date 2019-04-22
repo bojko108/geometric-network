@@ -19,6 +19,14 @@ export const distance = (p1, p2) => {
   return Math.sqrt(sqDist);
 };
 
+export const getLength = lineCoordinates => {
+  let length = 0;
+  for (let i = 0; i < lineCoordinates.length - 1; i++) {
+    length += distance(lineCoordinates[i], lineCoordinates[i + 1]);
+  }
+  return length;
+};
+
 export const isOnSegment = (segment, point) => {
   const sqLength = distance(segment[0], segment[1]);
   const sqDistToStart = distance(segment[0], point);

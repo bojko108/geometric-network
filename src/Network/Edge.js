@@ -1,4 +1,4 @@
-import { getEdgeId } from '../Helpers';
+import { getEdgeId, getLength } from '../Helpers';
 import Node from './Node';
 
 export default class Edge {
@@ -107,5 +107,7 @@ export default class Edge {
     this.minY = Math.min(...ys);
     this.maxX = Math.max(...xs);
     this.maxY = Math.max(...ys);
+
+    this.length = getLength(this.coordinates);
   }
 }
