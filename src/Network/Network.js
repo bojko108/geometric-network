@@ -1,5 +1,5 @@
 import rbush from 'rbush';
-import { toGeoJSON, resetIndices, coordinatesAreEqual, nodesAreEqual, split } from '../Helpers';
+import { toGeoJSON, resetIndices, nodesAreEqual, split } from '../Helpers';
 import Node from './Node';
 import Edge from './Edge';
 import * as events from '../Events/Events';
@@ -116,6 +116,7 @@ export default class Network {
     edge.start.addAdjacent(edge.end);
     edge.end.addAdjacent(edge.start);
 
+    // connect to all other edges located at start/end nodes of this edge
     let edges = this.findEdgesAt(edge.start).filter(e => e.id !== edge.id);
     for (let i = 0; i < edges.length; i++) {
       this._fillAdjacency(edge, edges[i]);
@@ -129,13 +130,11 @@ export default class Network {
   }
 
   /**
-   * Disconnects an edge from the network. Check the result of this function to 
-   * see if the nodes are `orphan`.
-   * @param {!Edge|String} edgeOrId - edge or ID of an edge to be disconnected
+   * Disconnects an edge from the network. This function removes the adjacency between 
+   * start and end nodes of the processed edge.
+   * @param {!Edge|Number} edgeOrId - edge or ID of an edge to be disconnected
    * from the network
-   * @return {Object.<Strung,Boolean>}
-   * @param {Boolean} result.removeStartNode - `true` if the start node is `orphan`
-   * @param {Boolean} result.removeEndNode - `true` if the end node is `orphan`
+   * @return {undefined}
    */
   disconnectEdge(edgeOrId) {
     const edge = edgeOrId instanceof Edge ? edgeOrId : this.getEdgeById(edgeOrId);
@@ -147,18 +146,12 @@ export default class Network {
     edge.start.removeAdjacent(edge.end);
     edge.end.removeAdjacent(edge.start);
 
-    const result = {
-      removeStartNode: edge.start.orphan,
-      removeEndNode: edge.end.orphan
-    };
-    this.events.emit(events.DISCONNECT_EDGE, edge, result);
-
-    return result;
+    this.events.emit(events.DISCONNECT_EDGE, edge);
   }
 
   /**
    * Adds a new node to the network. If the network have an edge on the coordinates of the
-   * node the edge will be splitted. The split oepration is done this way:
+   * node the edge will be splitted. The split operation works this way:
    *  A          C            B
    *  x----------X------------x
    *  If C is the new node then the edge from A to B will be modified:
@@ -244,12 +237,12 @@ export default class Network {
 
   removeEdge(edge) {
     if (this._elementsTree.remove(edge, this._equalityFunction)) {
-      const { removeStartNode, removeEndNode } = this.disconnectEdge(edge);
+      this.disconnectEdge(edge);
 
-      if (removeStartNode) {
+      if (edge.start.orphan) {
         this._elementsTree.remove(edge.start);
       }
-      if (removeEndNode) {
+      if (edge.end.orphan) {
         this._elementsTree.remove(edge.end);
       }
 
@@ -320,6 +313,12 @@ export default class Network {
   removeOrphanNodes() {}
 
   updateEdge(id, coordinates, startNode, endNode) {
+    // 1. Disconnect
+    // 2. Remove from index
+    // 3. Set start/end nodes
+    // 4. Set coordinates
+    // 5. Connect
+
     const oldEdge = this.getEdgeById(id);
 
     if (!oldEdge) {
