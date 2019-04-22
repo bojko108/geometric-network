@@ -194,13 +194,76 @@ describe('Network Modifications tests', () => {
     assert.deepEqual(edge4.end.adjacent, [edge3.start.id]);
     assert.deepEqual(edge5.end.adjacent, [edge3.start.id]);
     assert.deepEqual(edge3.start.adjacent, [edge1.start.id, edge3.end.id, edge2.start.id, edge4.end.id, edge5.end.id]);
+    debugger;
+    let node = network.getNodeById(6);
+    network.updateNode(5, [4, 2.5]);
 
-    network.removeEdgeById(5);
+    let a = JSON.stringify(network.toGeoJSON('asd'));
 
-    assert.equal(network.all().length, 9);
-    assert.equal(network.all('edge').length, 4);
-    assert.equal(network.all('node').length, 5);
-    assert.deepEqual(edge3.start.adjacent, [edge1.start.id, edge3.end.id, edge2.start.id, edge4.end.id]);
+    // network.removeEdgeById(5);
+
+    // assert.equal(network.all().length, 9);
+    // assert.equal(network.all('edge').length, 4);
+    // assert.equal(network.all('node').length, 5);
+    // assert.deepEqual(edge3.start.adjacent, [edge1.start.id, edge3.end.id, edge2.start.id, edge4.end.id]);
+  });
+
+  it('Should update a node and all connected edges', () => {
+    assert.equal(network.all().length, 0);
+    const coordinates1 = [[0, 0], [5, 5]];
+    const coordinates2 = [[0, 5], [5, 0]];
+
+    const edge1 = network.addEdge(coordinates1);
+    assert.equal(network.all().length, 3);
+    assert.equal(network.all('edge').length, 1);
+    assert.equal(network.all('node').length, 2);
+
+    const edge2 = network.addEdge(coordinates2);
+    assert.equal(network.all().length, 6);
+    assert.equal(network.all('edge').length, 2);
+    assert.equal(network.all('node').length, 4);
+
+    const edge5 = network.addEdge([[2.5, 2.5], [2.5, 5]]);
+    assert.equal(network.all().length, 11);
+    assert.equal(network.all('edge').length, 5);
+    assert.equal(network.all('node').length, 6);
+
+    const edge3 = network.getEdgeById(3);
+    assert.isDefined(edge3);
+    const edge4 = network.getEdgeById(4);
+    assert.isDefined(edge4);
+
+    assert.equal(edge1.end, edge5.start);
+    assert.equal(edge2.end, edge5.start);
+    assert.equal(edge3.start, edge5.start);
+    assert.equal(edge4.start, edge5.start);
+    assert.deepEqual(edge1.start.adjacent, [edge3.start.id]);
+    assert.deepEqual(edge2.start.adjacent, [edge3.start.id]);
+    assert.deepEqual(edge3.end.adjacent, [edge3.start.id]);
+    assert.deepEqual(edge4.end.adjacent, [edge3.start.id]);
+    assert.deepEqual(edge5.end.adjacent, [edge3.start.id]);
+    assert.deepEqual(edge3.start.adjacent, [edge1.start.id, edge3.end.id, edge2.start.id, edge4.end.id, edge5.end.id]);
+
+    // UDPATE A NODE: node with ID 6 is edge5.start
+    network.updateNode(5, [4, 2.5]);
+
+    assert.equal(edge1.end, edge5.start);
+    assert.equal(edge2.end, edge5.start);
+    assert.equal(edge3.start, edge5.start);
+    assert.equal(edge4.start, edge5.start);
+    assert.deepEqual(edge1.coordinates[edge1.vertexCount - 1], edge5.start.coordinates);
+    assert.deepEqual(edge2.coordinates[edge2.vertexCount - 1], edge5.start.coordinates);
+    assert.deepEqual(edge3.coordinates[0], edge5.start.coordinates);
+    assert.deepEqual(edge4.coordinates[0], edge5.start.coordinates);
+
+    let a = JSON.stringify(network.toGeoJSON('asd'));
+
+    // network.removeEdgeById(5);
+
+    // assert.equal(network.all().length, 9);
+    // assert.equal(network.all('edge').length, 4);
+    // assert.equal(network.all('node').length, 5);
+    // assert.deepEqual(edge3.start.adjacent, [edge1.start.id, edge3.end.id, edge2.start.id, edge4.end.id]);
   });
 
   it('Should update all edges when start node is moved', () => {

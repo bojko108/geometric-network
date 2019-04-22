@@ -37,6 +37,8 @@ export default class Network {
      * @type {EventEmitter}
      */
     this.events = new EventEmitter();
+
+    this.events.on(events.UPDATE_NODE, (node, oldCoordinates) => this._onUpdateNode(node, oldCoordinates));
   }
 
   addFromGeoJSON(json) {
@@ -284,6 +286,50 @@ export default class Network {
     return false;
   }
 
+  // use this method when updating start/end nodes for an edge
+  updateNode(id, newCoordinates) {
+    const node = this.getNodeById(id);
+    if (!node) {
+      throw `InvalidArgument: node with ID: ${id} was not found in the network`;
+    }
+
+    // TODO:
+    // WHAT IF A NODE ALREADY EXISTS ON newCoordinates???
+
+    const oldCoordinates = [...node.coordinates];
+
+    this._elementsTree.remove(node);
+    node.setCoordinates(newCoordinates);
+    this._elementsTree.insert(node);
+
+    this.events.emit(events.UPDATE_NODE, node, oldCoordinates);
+
+    return node;
+  }
+
+  _onUpdateNode(node, oldCoordinates) {
+    const edges = this.findEdgesAt(oldCoordinates);
+    for (let i = 0; i < edges.length; i++) {
+      const edge = edges[i];
+      const oldCoordinates = [...edge.coordinates];
+      const newCoordinates = [...edge.coordinates];
+ 
+      if (edge.start === node) {
+        newCoordinates[0] = [...node.coordinates];
+      }
+ 
+      if (edge.end === node) {
+        newCoordinates[edge.vertexCount - 1] = [...node.coordinates];
+      }
+ 
+      this._elementsTree.remove(edge);
+      edge.setCoordinates(newCoordinates);
+      this._elementsTree.insert(edge);
+      
+      this.events.emit(events.UPDATE_EDGE, edge, oldCoordinates);
+    }
+  }
+
   _equalityFunction(a, b) {
     return a.id === b.id && a.type === b.type;
   }
@@ -329,20 +375,32 @@ export default class Network {
   }
 
   ////////////////////////////////////////////////////////
-  //////////////////// NOT TESTED:////////////////////////
+  //////////////////// NOT TESTED ////////////////////////
   ////////////////////////////////////////////////////////
 
-  updateNode(id, newCoordinates) {
-    const node = this.getNodeById(id);
-    if (!node) {
-      throw `InvalidArgument: node with ID: ${id} was not found in the network`;
+  // use this method when updating coordinates for an edge, except start/end nodes
+  updateEdge(id, newCoordinates) {
+    const edge = this.getEdgeById(id);
+
+    if (!edge) {
+      throw `InvalidArgument: edge with ID: ${id} was not found in the network`;
     }
+
+    const oldCoordinates = [...edge.coordinates];
+
+    this._elementsTree.remove(edge);
+    edge.setCoordinates(newCoordinates);
+    this._elementsTree.insert(edge);
+
+    this.events.emit(events.UPDATE_EDGE, edge, oldCoordinates);
+
+    return edge;
   }
 
   // TODO
   removeOrphanNodes() {}
 
-  updateEdge(id, coordinates, startNode, endNode) {
+  updateEdgeOld(id, coordinates, startNode, endNode) {
     // 1. Disconnect
     // 2. Remove from index
     // 3. Set start/end nodes

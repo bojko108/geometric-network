@@ -786,21 +786,25 @@ class EventEmitter {
   }
 }
 
+const MAX_ENTRIES = 9;
+
 class Network {
-  constructor(options = {}, edges = []) {
+  constructor(options = {}) {
     resetIndices();
-    this._elementsTree = new rbush_1(3);
+    this._elementsTree = new rbush_1(options.maxEntries || MAX_ENTRIES);
     this.events = new EventEmitter();
-    for (let i = 0; i < edges.length; i++) {
-      this.addEdge(edges[i]);
-    }
+    this.events.on(UPDATE_NODE, (node, oldCoordinates) => this._onUpdateNode(node, oldCoordinates));
   }
   addFromGeoJSON(json) {
-    let edges = json.features.map(f => {
-      return f.geometry.coordinates;
+    let elements = json.features.map(f => {
+      return { type: f.geometry.type, coordinates: f.geometry.coordinates };
     });
-    for (let i = 0; i < edges.length; i++) {
-      this.addEdge(edges[i]);
+    for (let i = 0; i < elements.length; i++) {
+      if (elements[i].type === 'Point') {
+        this.addNode(elements[i].coordinates);
+      } else {
+        this.addEdge(elements[i].coordinates);
+      }
     }
   }
   toGeoJSON(name = 'Network', elementType) {
@@ -813,6 +817,12 @@ class Network {
     } else {
       return this._elementsTree.all();
     }
+  }
+  getNodeById(id) {
+    return this.all('node').filter(node => node.id === id)[0];
+  }
+  getNodesById(ids) {
+    return this.all('node').filter(node => ids.indexOf(node.id) > -1);
   }
   getEdgeById(id) {
     return this.all('edge').filter(edge => edge.id === id)[0];
@@ -958,6 +968,36 @@ class Network {
     }
     return false;
   }
+  updateNode(id, newCoordinates) {
+    const node = this.getNodeById(id);
+    if (!node) {
+      throw `InvalidArgument: node with ID: ${id} was not found in the network`;
+    }
+    const oldCoordinates = [...node.coordinates];
+    this._elementsTree.remove(node);
+    node.setCoordinates(newCoordinates);
+    this._elementsTree.insert(node);
+    this.events.emit(UPDATE_NODE, node, oldCoordinates);
+    return node;
+  }
+  _onUpdateNode(node, oldCoordinates) {
+    const edges = this.findEdgesAt(oldCoordinates);
+    for (let i = 0; i < edges.length; i++) {
+      const edge = edges[i];
+      const oldCoordinates = [...edge.coordinates];
+      const newCoordinates = [...edge.coordinates];
+      if (edge.start === node) {
+        newCoordinates[0] = [...node.coordinates];
+      }
+      if (edge.end === node) {
+        newCoordinates[edge.vertexCount - 1] = [...node.coordinates];
+      }
+      this._elementsTree.remove(edge);
+      edge.setCoordinates(newCoordinates);
+      this._elementsTree.insert(edge);
+      this.events.emit(UPDATE_EDGE, edge, oldCoordinates);
+    }
+  }
   _equalityFunction(a, b) {
     return a.id === b.id && a.type === b.type;
   }
@@ -993,8 +1033,20 @@ class Network {
       edge.end.removeAdjacent(other.start);
     }
   }
+  updateEdge(id, newCoordinates) {
+    const edge = this.getEdgeById(id);
+    if (!edge) {
+      throw `InvalidArgument: edge with ID: ${id} was not found in the network`;
+    }
+    const oldCoordinates = [...edge.coordinates];
+    this._elementsTree.remove(edge);
+    edge.setCoordinates(newCoordinates);
+    this._elementsTree.insert(edge);
+    this.events.emit(UPDATE_EDGE, edge, oldCoordinates);
+    return edge;
+  }
   removeOrphanNodes() {}
-  updateEdge(id, coordinates, startNode, endNode) {
+  updateEdgeOld(id, coordinates, startNode, endNode) {
     const oldEdge = this.getEdgeById(id);
     if (!oldEdge) {
       throw `InvalidArgument: edge with ID: ${id} was not found in the network`;
