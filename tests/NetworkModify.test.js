@@ -64,7 +64,7 @@ describe('Network Modifications tests', () => {
     assert.equal(network.all().length, 3);
     assert.equal(network.all('edge').length, 1);
     assert.equal(network.all('node').length, 2);
-    debugger;
+
     const edge3 = network.addEdge(coordinates);
     assert.equal(network.all().length, 5);
     assert.equal(network.all('edge').length, 2);
@@ -117,16 +117,16 @@ describe('Network Modifications tests', () => {
     assert.equal(network.all('edge').length, 3);
     assert.equal(network.all('node').length, 4);
 
-    const newEdge = network.getEdgeById(3);
+    const newEdge = network.getEdgeById(2);
     assert.isDefined(newEdge);
 
     assert.equal(edge5.end, edge3.start);
     assert.equal(edge3.start, newEdge.start);
     assert.deepEqual(edge5.start.adjacent, [edge5.end.id]);
-    assert.deepEqual(edge5.end.adjacent, [edge3.end.id, edge5.start.id, newEdge.end.id]);
-    assert.deepEqual(edge3.start.adjacent, [edge3.end.id, edge5.start.id, newEdge.end.id]);
+    assert.deepEqual(edge5.end.adjacent, [edge5.start.id, newEdge.end.id, edge3.end.id]);
+    assert.deepEqual(edge3.start.adjacent, [edge5.start.id, newEdge.end.id, edge3.end.id]);
     assert.deepEqual(edge3.end.adjacent, [edge3.start.id]);
-    assert.deepEqual(newEdge.start.adjacent, [edge3.end.id, edge5.start.id, newEdge.end.id]);
+    assert.deepEqual(newEdge.start.adjacent, [edge5.start.id, newEdge.end.id, edge3.end.id]);
     assert.deepEqual(newEdge.end.adjacent, [newEdge.start.id]);
   });
 
@@ -139,22 +139,22 @@ describe('Network Modifications tests', () => {
     assert.equal(network.all().length, 3);
     assert.equal(network.all('edge').length, 1);
     assert.equal(network.all('node').length, 2);
-
+    debugger;
     const edge3 = network.addEdge(coordinates);
     assert.equal(network.all().length, 7);
     assert.equal(network.all('edge').length, 3);
     assert.equal(network.all('node').length, 4);
 
-    const newEdge = network.getEdgeById(3);
+    const newEdge = network.getEdgeById(2);
     assert.isDefined(newEdge);
 
     assert.equal(edge1.end, edge3.end);
     assert.equal(edge3.end, newEdge.start);
     assert.deepEqual(edge1.start.adjacent, [edge1.end.id]);
-    assert.deepEqual(edge1.end.adjacent, [edge3.start.id, edge1.start.id, newEdge.end.id]);
+    assert.deepEqual(edge1.end.adjacent, [edge1.start.id, newEdge.end.id, edge3.start.id]);
     assert.deepEqual(edge3.start.adjacent, [edge3.end.id]);
-    assert.deepEqual(edge3.end.adjacent, [edge3.start.id, edge1.start.id, newEdge.end.id]);
-    assert.deepEqual(newEdge.start.adjacent, [edge3.start.id, edge1.start.id, newEdge.end.id]);
+    assert.deepEqual(edge3.end.adjacent, [edge1.start.id, newEdge.end.id, edge3.start.id]);
+    assert.deepEqual(newEdge.start.adjacent, [edge1.start.id, newEdge.end.id, edge3.start.id]);
     assert.deepEqual(newEdge.end.adjacent, [newEdge.start.id]);
   });
 

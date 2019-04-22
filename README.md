@@ -1,9 +1,11 @@
 # v2.0!
-
 - [] Update connected edges (what about leaf edges?)
 - [] Remove edges
 - [] Test events
 - [] Update docs
+# 3.0!
+- [] Implement topology check
+  - [] Define rules like: must not have dangles, end must be covered by node...
 
 # Geometric Network
 
