@@ -15,7 +15,7 @@ describe('Network Modifications tests', () => {
 
   it('Should add a new edge', () => {
     assert.equal(network.all().length, 0);
-    debugger;
+
     network.addEdge(data.features[0].geometry.coordinates);
     assert.equal(network.all().length, 3);
     assert.equal(network.all('edge').length, 1);
@@ -37,7 +37,7 @@ describe('Network Modifications tests', () => {
     assert.equal(network.all().length, 12);
     assert.equal(network.all('edge').length, 5);
     assert.equal(network.all('node').length, 7);
-    debugger;
+
     network.removeEdgeById(2);
     assert.equal(network.all().length, 11);
     assert.equal(network.all('edge').length, 4);
@@ -139,7 +139,7 @@ describe('Network Modifications tests', () => {
     assert.equal(network.all().length, 3);
     assert.equal(network.all('edge').length, 1);
     assert.equal(network.all('node').length, 2);
-    debugger;
+
     const edge3 = network.addEdge(coordinates);
     assert.equal(network.all().length, 7);
     assert.equal(network.all('edge').length, 3);
@@ -156,6 +156,50 @@ describe('Network Modifications tests', () => {
     assert.deepEqual(edge3.end.adjacent, [edge1.start.id, newEdge.end.id, edge3.start.id]);
     assert.deepEqual(newEdge.start.adjacent, [edge1.start.id, newEdge.end.id, edge3.start.id]);
     assert.deepEqual(newEdge.end.adjacent, [newEdge.start.id]);
+  });
+
+  it('Should split two edges at intersection point', () => {
+    assert.equal(network.all().length, 0);
+    const coordinates1 = [[0, 0], [5, 5]];
+    const coordinates2 = [[0, 5], [5, 0]];
+
+    const edge1 = network.addEdge(coordinates1);
+    assert.equal(network.all().length, 3);
+    assert.equal(network.all('edge').length, 1);
+    assert.equal(network.all('node').length, 2);
+
+    const edge2 = network.addEdge(coordinates2);
+    assert.equal(network.all().length, 6);
+    assert.equal(network.all('edge').length, 2);
+    assert.equal(network.all('node').length, 4);
+
+    const edge5 = network.addEdge([[2.5, 2.5], [2.5, 5]]);
+    assert.equal(network.all().length, 11);
+    assert.equal(network.all('edge').length, 5);
+    assert.equal(network.all('node').length, 6);
+
+    const edge3 = network.getEdgeById(3);
+    assert.isDefined(edge3);
+    const edge4 = network.getEdgeById(4);
+    assert.isDefined(edge4);
+
+    assert.equal(edge1.end, edge5.start);
+    assert.equal(edge2.end, edge5.start);
+    assert.equal(edge3.start, edge5.start);
+    assert.equal(edge4.start, edge5.start);
+    assert.deepEqual(edge1.start.adjacent, [edge3.start.id]);
+    assert.deepEqual(edge2.start.adjacent, [edge3.start.id]);
+    assert.deepEqual(edge3.end.adjacent, [edge3.start.id]);
+    assert.deepEqual(edge4.end.adjacent, [edge3.start.id]);
+    assert.deepEqual(edge5.end.adjacent, [edge3.start.id]);
+    assert.deepEqual(edge3.start.adjacent, [edge1.start.id, edge3.end.id, edge2.start.id, edge4.end.id, edge5.end.id]);
+
+    network.removeEdgeById(5);
+
+    assert.equal(network.all().length, 9);
+    assert.equal(network.all('edge').length, 4);
+    assert.equal(network.all('node').length, 5);
+    assert.deepEqual(edge3.start.adjacent, [edge1.start.id, edge3.end.id, edge2.start.id, edge4.end.id]);
   });
 
   it('Should update all edges when start node is moved', () => {

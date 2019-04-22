@@ -128,6 +128,15 @@ export default class Network {
     this.events.emit(events.CONNECT_EDGE, edge);
   }
 
+  /**
+   * Disconnects an edge from the network. Check the result of this function to 
+   * see if the nodes are `orphan`.
+   * @param {!Edge|String} edgeOrId - edge or ID of an edge to be disconnected
+   * from the network
+   * @return {Object.<Strung,Boolean>}
+   * @param {Boolean} result.removeStartNode - `true` if the start node is `orphan`
+   * @param {Boolean} result.removeEndNode - `true` if the end node is `orphan`
+   */
   disconnectEdge(edgeOrId) {
     const edge = edgeOrId instanceof Edge ? edgeOrId : this.getEdgeById(edgeOrId);
 
@@ -138,17 +147,9 @@ export default class Network {
     edge.start.removeAdjacent(edge.end);
     edge.end.removeAdjacent(edge.start);
 
-    let removeStartNode = edge.start.orphan;
-    let removeEndNode = edge.end.orphan;
-    // // These are used in this.removeEdge().
-    // // If the node is connected to more than one edge
-    // // these booleans will be set to false.
-    // let removeStartNode = this.findEdgesAt(edge.start).filter(e => e.id !== edge.id).length < 1;
-    // let removeEndNode = this.findEdgesAt(edge.end).filter(e => e.id !== edge.id).length < 1;
-
     const result = {
-      removeStartNode,
-      removeEndNode
+      removeStartNode: edge.start.orphan,
+      removeEndNode: edge.end.orphan
     };
     this.events.emit(events.DISCONNECT_EDGE, edge, result);
 
@@ -163,9 +164,9 @@ export default class Network {
    *  If C is the new node then the edge from A to B will be modified:
    *    - from A to C
    *    - new edge will be created from C to B
-   * @param {Array.<Number>} coordinates - coordinates of the node in format `[x, y]`
+   * @param {!Array.<Number>} coordinates - coordinates of the node in format `[x, y]`
    */
-  addNode(coordinates) {
+  addNode(coordinates = []) {
     if (coordinates.length !== 2) {
       throw `InvalidArgument: addNode() - coordinates must be in format [x, y]`;
     }
@@ -206,7 +207,7 @@ export default class Network {
     return node;
   }
 
-  addEdge(coordinates) {
+  addEdge(coordinates = []) {
     if (coordinates.length < 2) {
       throw `InvalidArgument: addEdge() - coordinates must be in format [[x1, y1], [x2, y2], ...]`;
     }
@@ -231,6 +232,33 @@ export default class Network {
     this.events.emit(events.ADD_EDGE, edge);
 
     return edge;
+  }
+
+  removeEdgeById(id) {
+    const edge = this.getEdgeById(id);
+    if (!edge) {
+      throw `InvalidArgument: edge with ID: ${id} was not found in the network`;
+    }
+    return this.removeEdge(edge);
+  }
+
+  removeEdge(edge) {
+    if (this._elementsTree.remove(edge, this._equalityFunction)) {
+      const { removeStartNode, removeEndNode } = this.disconnectEdge(edge);
+
+      if (removeStartNode) {
+        this._elementsTree.remove(edge.start);
+      }
+      if (removeEndNode) {
+        this._elementsTree.remove(edge.end);
+      }
+
+      this.events.emit(events.REMOVE_EDGE, edge);
+
+      return true;
+    }
+
+    return false;
   }
 
   _equalityFunction(a, b) {
@@ -287,49 +315,6 @@ export default class Network {
   //     this.removeEdge(edges[i]);
   //   }
   // }
-
-  removeEdgeById(id) {
-    const edge = this.getEdgeById(id);
-    if (!edge) {
-      throw `InvalidArgument: edge with ID: ${id} was not found in the network`;
-    }
-    return this.removeEdge(edge);
-  }
-
-  removeEdge(edge) {
-    if (this._elementsTree.remove(edge, this._equalityFunction)) {
-      // TODO remove the connections as well
-
-      const { removeStartNode, removeEndNode } = this.disconnectEdge(edge);
-
-      // const edgesOnStart = this.findEdgesAt(edge.start).filter(e => e.id !== edge.id);
-      // edgesOnStart.map(edgeOnStart => {
-      //   edgeOnStart.start.removeAdjacent(edge.start);
-      //   edgeOnStart.end.removeAdjacent(edge.start);
-      //   removeStartNode = true;
-      // });
-
-      // const edgesOnEnd = this.findEdgesAt(edge.end).filter(e => e.id !== edge.id);
-      // edgesOnEnd.map(edgeOnEnd => {
-      //   edgeOnEnd.start.removeAdjacent(edge.end);
-      //   edgeOnEnd.end.removeAdjacent(edge.end);
-      //   removeEndNode = true;
-      // });
-
-      if (removeStartNode) {
-        this._elementsTree.remove(edge.start);
-      }
-      if (removeEndNode) {
-        this._elementsTree.remove(edge.end);
-      }
-
-      this.events.emit(events.REMOVE_EDGE, edge);
-
-      return true;
-    }
-
-    return false;
-  }
 
   // TODO
   removeOrphanNodes() {}
