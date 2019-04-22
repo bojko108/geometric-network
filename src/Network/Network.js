@@ -152,10 +152,9 @@ export default class Network {
   }
 
   /**
-   * Disconnects an edge from the network. This function removes the adjacency between
-   * start and end nodes of the processed edge.
-   * @param {!Edge|Number} edgeOrId - edge or ID of an edge to be disconnected
-   * from the network
+   * Disconnects an edge from the network. This function removes the adjacency between 
+   * `start` and `end` nodes of the processed edge.
+   * @param {!Edge|Number} edgeOrId - edge or ID of an edge to be disconnected from the network
    * @return {undefined}
    */
   disconnectEdge(edgeOrId) {

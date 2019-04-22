@@ -23,7 +23,6 @@ export const isOnSegment = (segment, point) => {
   const sqLength = distance(segment[0], segment[1]);
   const sqDistToStart = distance(segment[0], point);
   const sqDistToEnd = distance(segment[1], point);
-  const d = sqDistToStart + sqDistToEnd;
   return Math.abs(sqLength - (sqDistToStart + sqDistToEnd)) < Number.EPSILON;
 };
 
