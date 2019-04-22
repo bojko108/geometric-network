@@ -28,6 +28,39 @@ describe('Network Query tests', () => {
     assert.equal(elements.length, 7);
   });
 
+  it('Should get a node by ID', () => {
+    let id = 1;
+    let node = network.getNodeById(id);
+    assert.isDefined(node);
+    assert.isTrue(node instanceof Node);
+    assert.equal(node.id, id);
+
+    id = 1234;
+    node = network.getNodeById(id);
+    assert.isUndefined(node);
+  });
+
+  it('Should get nodes by ID', () => {
+    let ids = [1, 2, 3];
+    let nodes = network.getNodesById(ids);
+    assert.isArray(nodes);
+    assert.equal(nodes.length, ids.length);
+    for (let i = 0; i < nodes.length; i++) {
+      assert.isTrue(nodes[i] instanceof Node);
+      assert.isTrue(ids.indexOf(nodes[i].id) > -1);
+    }
+
+    ids = [1, 124, 3, 235];
+    nodes = network.getNodesById(ids);
+    assert.isArray(nodes);
+    assert.equal(nodes.length, ids.length - 2);
+
+    assert.isTrue(nodes[0] instanceof Node);
+    assert.isTrue(ids.indexOf(nodes[0].id) > -1);
+    assert.isTrue(nodes[1] instanceof Node);
+    assert.isTrue(ids.indexOf(nodes[1].id) > -1);
+  });
+
   it('Should get an edge by ID', () => {
     let id = 1;
     let edge = network.getEdgeById(id);

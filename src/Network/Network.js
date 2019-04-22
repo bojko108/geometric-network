@@ -66,6 +66,14 @@ export default class Network {
     }
   }
 
+  getNodeById(id) {
+    return this.all('node').filter(node => node.id === id)[0];
+  }
+
+  getNodesById(ids) {
+    return this.all('node').filter(node => ids.indexOf(node.id) > -1);
+  }
+
   getEdgeById(id) {
     return this.all('edge').filter(edge => edge.id === id)[0];
   }
@@ -152,7 +160,7 @@ export default class Network {
   }
 
   /**
-   * Disconnects an edge from the network. This function removes the adjacency between 
+   * Disconnects an edge from the network. This function removes the adjacency between
    * `start` and `end` nodes of the processed edge.
    * @param {!Edge|Number} edgeOrId - edge or ID of an edge to be disconnected from the network
    * @return {undefined}
@@ -218,6 +226,7 @@ export default class Network {
     }
 
     this.events.emit(events.ADD_NODE, node);
+
     return node;
   }
 
@@ -323,12 +332,12 @@ export default class Network {
   //////////////////// NOT TESTED:////////////////////////
   ////////////////////////////////////////////////////////
 
-  // removeEdges(coordinates) {
-  //   const edges = this.findEdgesAt(coordinates);
-  //   for (let i = 0; i < edges.length; i++) {
-  //     this.removeEdge(edges[i]);
-  //   }
-  // }
+  updateNode(id, newCoordinates) {
+    const node = this.getNodeById(id);
+    if (!node) {
+      throw `InvalidArgument: node with ID: ${id} was not found in the network`;
+    }
+  }
 
   // TODO
   removeOrphanNodes() {}
