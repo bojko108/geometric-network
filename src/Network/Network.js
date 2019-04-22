@@ -4,29 +4,52 @@ import Node from './Node';
 import Edge from './Edge';
 import * as events from '../Events/Events';
 import EventEmitter from '../Events/EventEmitter';
-import defaultOptions from './defaultOptions';
+import { MAX_ENTRIES } from './defaultOptions';
 
+/**
+ * Main class for creating and managing a geometric network.
+ * @public
+ * @example
+ * const network = new Network()
+ *
+ */
 export default class Network {
-  constructor(options = {}, edges = []) {
+  /**
+   * Creates a new geometric network.
+   * @param {Object.<String,*>} [options] - parameters for the geoemtric network
+   * @param {Number} [maxEntries] - maxumum number of elements in a single node from
+   * the spatial index. Default is {@link MAX_ENTRIES}.
+   */
+  constructor(options = {}) {
     // resets nodes and edges indices to 0
     resetIndices();
 
-    this._elementsTree = new rbush(3);
+    /**
+     * Network's spatial index
+     * @private
+     * @type {rbush}
+     */
+    this._elementsTree = new rbush(options.maxEntries || MAX_ENTRIES);
 
+    /**
+     * Object for listening to network events such as `addnode`, `addedge`...
+     * @public
+     * @type {EventEmitter}
+     */
     this.events = new EventEmitter();
-
-    for (let i = 0; i < edges.length; i++) {
-      this.addEdge(edges[i]);
-    }
   }
 
   addFromGeoJSON(json) {
-    let edges = json.features.map(f => {
-      return f.geometry.coordinates;
+    let elements = json.features.map(f => {
+      return { type: f.geometry.type, coordinates: f.geometry.coordinates };
     });
 
-    for (let i = 0; i < edges.length; i++) {
-      this.addEdge(edges[i]);
+    for (let i = 0; i < elements.length; i++) {
+      if (elements[i].type === 'Point') {
+        this.addNode(elements[i].coordinates);
+      } else {
+        this.addEdge(elements[i].coordinates);
+      }
     }
   }
 
