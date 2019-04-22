@@ -10,7 +10,8 @@ describe('Network Modifications tests', () => {
   let network;
 
   beforeEach(() => {
-    network = new Network(16);
+    network = new Network();
+    assert.isDefined(network);
   });
 
   it('Should add a new edge', () => {

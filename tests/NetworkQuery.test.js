@@ -8,10 +8,9 @@ describe('Network Query tests', () => {
   let network;
 
   beforeEach(() => {
-    network = new Network(16);
+    network = new Network();
+    assert.isDefined(network);
     network.addFromGeoJSON(data);
-    const json = network.toGeoJSON();
-    assert.isDefined(json);
   });
 
   it('Should get all elements from the network', () => {
@@ -48,7 +47,7 @@ describe('Network Query tests', () => {
     assert.equal(edges.length, ids.length);
     for (let i = 0; i < edges.length; i++) {
       assert.isTrue(edges[i] instanceof Edge);
-      assert.equal(edges[i].id, ids[i]);
+      assert.isTrue(ids.indexOf(edges[i].id) > -1);
     }
 
     ids = [1, 124, 3, 235];
@@ -57,9 +56,9 @@ describe('Network Query tests', () => {
     assert.equal(edges.length, ids.length - 2);
 
     assert.isTrue(edges[0] instanceof Edge);
-    assert.equal(edges[0].id, ids[0]);
+    assert.isTrue(ids.indexOf(edges[0].id) > -1);
     assert.isTrue(edges[1] instanceof Edge);
-    assert.equal(edges[1].id, ids[2]);
+    assert.isTrue(ids.indexOf(edges[1].id) > -1);
   });
 
   it('Should find all elements at coordinates', () => {

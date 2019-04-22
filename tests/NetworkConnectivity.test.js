@@ -6,10 +6,9 @@ describe('Network Connectivity tests', () => {
   let network;
 
   beforeEach(() => {
-    network = new Network(16);
+    network = new Network();
+    assert.isDefined(network);
     network.addFromGeoJSON(data);
-    const json = network.toGeoJSON();
-    assert.isDefined(json);
   });
 
   it('Should disconnect edge #1', () => {

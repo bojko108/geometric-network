@@ -8,12 +8,12 @@ import * as events from '../src/Events/Events';
 
 describe('Network tests', () => {
   it('Should create a network', () => {
-    const network = new Network(16);
+    const network = new Network();
     assert.isDefined(network);
   });
 
   it('Should create a network from GeoJSON', () => {
-    const network = new Network(16);
+    const network = new Network();
     network.addFromGeoJSON(data);
     assert.isDefined(network);
     const elements = network.all('edge');
@@ -21,7 +21,7 @@ describe('Network tests', () => {
   });
 
   it('Should export the network in GeoJSON', () => {
-    const network = new Network(16);
+    const network = new Network();
     network.addFromGeoJSON(data);
     const elements = network.all();
     const json = network.toGeoJSON('network');

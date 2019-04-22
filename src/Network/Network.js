@@ -4,20 +4,19 @@ import Node from './Node';
 import Edge from './Edge';
 import * as events from '../Events/Events';
 import EventEmitter from '../Events/EventEmitter';
+import defaultOptions from './defaultOptions';
 
 export default class Network {
-  constructor(maxEntries = 9, edges = []) {
+  constructor(options = {}, edges = []) {
     // resets nodes and edges indices to 0
     resetIndices();
 
-    this._elementsTree = new rbush(maxEntries);
+    this._elementsTree = new rbush(3);
 
     this.events = new EventEmitter();
 
-    if (edges) {
-      for (let i = 0; i < edges.length; i++) {
-        this.addEdge(edges[i]);
-      }
+    for (let i = 0; i < edges.length; i++) {
+      this.addEdge(edges[i]);
     }
   }
 
@@ -130,7 +129,7 @@ export default class Network {
   }
 
   /**
-   * Disconnects an edge from the network. This function removes the adjacency between 
+   * Disconnects an edge from the network. This function removes the adjacency between
    * start and end nodes of the processed edge.
    * @param {!Edge|Number} edgeOrId - edge or ID of an edge to be disconnected
    * from the network
