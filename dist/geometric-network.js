@@ -581,6 +581,13 @@ const distance$1 = (p1, p2) => {
   const sqDist = squaredDistance(p1, p2);
   return Math.sqrt(sqDist);
 };
+const getLength = lineCoordinates => {
+  let length = 0;
+  for (let i = 0; i < lineCoordinates.length - 1; i++) {
+    length += distance$1(lineCoordinates[i], lineCoordinates[i + 1]);
+  }
+  return length;
+};
 const isOnSegment$1 = (segment, point) => {
   const sqLength = distance$1(segment[0], segment[1]);
   const sqDistToStart = distance$1(segment[0], point);
@@ -716,6 +723,7 @@ class Edge {
     this.minY = Math.min(...ys);
     this.maxX = Math.max(...xs);
     this.maxY = Math.max(...ys);
+    this.length = getLength(this.coordinates);
   }
 }
 

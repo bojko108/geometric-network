@@ -1,9 +1,12 @@
 # v2.0!
+
 - [] Update connected edges (what about leaf edges?)
 - [] Remove edges
 - [] Test events
 - [] Update docs
+
 # 3.0!
+
 - [] Implement topology check
   - [] Define rules like: must not have dangles, end must be covered by node...
 
@@ -19,7 +22,10 @@ You can install it with NPM (`npm install bojko108/geometric-network`) or Yarn (
 import { Network, events } from 'geometric-network';
 
 // create the network
-const network = new Network(elements);
+const network = new Network();
+network.addFromGeoJSON(json); // add elements from a GeoJSON file
+network.addNode(coordinates); // add a single node to the network
+network.addEdge(coordinates); // add a single edge to the network
 ```
 
 ## Network events
@@ -30,6 +36,11 @@ The network emits some events that can be used for keeping track of any changes 
 - `REMOVE_EDGE`
 - `UPDATE_EDGE`
 - `SPLIT_EDGE`
+- `CONNECT_EDGE`
+- `DISCONNECT_EDGE`
+- `ADD_NODE`
+- `REMOVE_NODE`
+- `UPDATE_NODE`
 
 ### Listening to events
 
@@ -37,7 +48,7 @@ The network emits some events that can be used for keeping track of any changes 
 import { Network, events } from 'geometric-network';
 
 // create the network
-const network = new Network(elements);
+const network = new Network();
 network.events.on(events.ADD_EDGE, callback);
 ```
 
@@ -58,7 +69,7 @@ A network can be created empty or from edges in GeoJSON format.
 ```js
 import { Network } from 'geometric-network';
 
-const network = new Network(null, 16);
+const network = new Network();
 ```
 
 ### Create from array of edges
@@ -66,7 +77,11 @@ const network = new Network(null, 16);
 ```js
 import { Network } from 'geometric-network';
 
-const network = new Network([edges], 16);
+const network = new Network();
+
+for (edge in edges) {
+  network.addEdge(edge);
+}
 ```
 
 ### Create from GeoJSON
@@ -74,7 +89,8 @@ const network = new Network([edges], 16);
 ```js
 import { Network } from 'geometric-network';
 
-const network = Network.fromGeoJSON(geoJsonData, 16);
+const network = new Network();
+network.addFromGeoJSON(json);
 ```
 
 ## Managing network elements
@@ -82,7 +98,7 @@ const network = Network.fromGeoJSON(geoJsonData, 16);
 ### Adding an edge
 
 ```js
-const network = new Network(null, 16);
+const network = new Network();
 network.addEdge([
   /* coordinates */
 ]);
