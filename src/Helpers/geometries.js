@@ -1,5 +1,11 @@
 export const coordinatesAreEqual = (a, b) => {
-  return a[0] === b[0] && a[1] === b[1];
+  return Math.abs(a[0] - b[0]) < Number.EPSILON && Math.abs(a[1] - b[1]) < Number.EPSILON;
+  // return a[0] === b[0] && a[1] === b[1];
+};
+
+export const nodesAreEqual = (a, b) => {
+  return Math.abs(a.x - b.x) < Number.EPSILON && Math.abs(a.y - b.y) < Number.EPSILON;
+  // return a.x === b.x && a.y === b.y;
 };
 
 export const squaredDistance = (p1, p2) => {
@@ -13,11 +19,18 @@ export const distance = (p1, p2) => {
   return Math.sqrt(sqDist);
 };
 
+export const getLength = lineCoordinates => {
+  let length = 0;
+  for (let i = 0; i < lineCoordinates.length - 1; i++) {
+    length += distance(lineCoordinates[i], lineCoordinates[i + 1]);
+  }
+  return length;
+};
+
 export const isOnSegment = (segment, point) => {
   const sqLength = distance(segment[0], segment[1]);
   const sqDistToStart = distance(segment[0], point);
   const sqDistToEnd = distance(segment[1], point);
-  const d = sqDistToStart + sqDistToEnd;
   return Math.abs(sqLength - (sqDistToStart + sqDistToEnd)) < Number.EPSILON;
 };
 
@@ -52,24 +65,3 @@ export const split = (lineCoordinates, point) => {
     return { splitIndex: splitIndex, firstCoordinates, secondCoordinates };
   }
 };
-
-// export const isOnSegment = (segment, point) => {
-//   // The cross product of `point -> start` and `start -> end` should equal zero.
-
-//   const dxc = point[0] - segment[0][0];
-//   const dyc = point[1] - segment[0][1];
-//   const dxl = segment[1][0] - segment[0][0];
-//   const dyl = segment[1][1] - segment[0][1];
-
-//   const cross = dxc * dyl - dyc * dxl;
-
-//   if (cross === 0) {
-//     if (Math.abs(dxl) >= Math.abs(dyl)) {
-//       return dxl > 0 ? segment[0][0] <= point[0] && point[0] <= segment[1][0] : segment[1][0] <= point[0] && point[0] <= segment[0][0];
-//     } else {
-//       return dyl > 0 ? segment[0][1] <= point[1] && point[1] <= segment[1][1] : segment[1][1] <= point[1] && point[1] <= segment[0][1];
-//     }
-//   } else {
-//     return false;
-//   }
-// }

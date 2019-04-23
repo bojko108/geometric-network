@@ -1,4 +1,9 @@
 export const ADD_EDGE = 'ADD_EDGE';
 export const REMOVE_EDGE = 'REMOVE_EDGE';
 export const UPDATE_EDGE = 'UPDATE_EDGE';
+export const ADD_NODE = 'ADD_NODE';
+export const REMOVE_NODE = 'REMOVE_NODE';
+export const UPDATE_NODE = 'UPDATE_NODE';
+export const CONNECT_EDGE = 'CONNECT_EDGE';
+export const DISCONNECT_EDGE = 'DISCONNECT_EDGE';
 export const SPLIT_EDGE = 'SPLIT_EDGE';

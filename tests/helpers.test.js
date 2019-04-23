@@ -1,7 +1,30 @@
 import { assert } from 'chai';
-import { coordinatesAreEqual, isOnSegment, split } from '../src/helpers';
+import { getNodeId, getEdgeId, coordinatesAreEqual, nodesAreEqual, isOnSegment, split, getLength } from '../src/Helpers';
+import Node from '../src/Network/Node';
 
 describe('Helpers tests', () => {
+  it('Should generate unique Node IDs', () => {
+    let nodes = [];
+
+    for (let i = 0; i < 50; i++) {
+      const id = getNodeId();
+      const index = nodes.indexOf(id);
+      assert.isTrue(index < 0);
+      nodes.push(id);
+    }
+  });
+
+  it('Should generate unique Edge IDs', () => {
+    let edges = [];
+
+    for (let i = 0; i < 50; i++) {
+      const id = getEdgeId();
+      const index = edges.indexOf(id);
+      assert.isTrue(index < 0);
+      edges.push(id);
+    }
+  });
+
   it('Should compare coordinates', () => {
     let a = [23.90328286754705, 42.13876052456928];
     let b = [23.90328286754705, 42.13876052456928];
@@ -34,7 +57,39 @@ describe('Helpers tests', () => {
     assert.isFalse(result);
   });
 
-  it('Should check if point is on a segment', () => {
+  it('Should compare nodes', () => {
+    let a = new Node([23.90328286754705, 42.13876052456928]);
+    let b = new Node([23.90328286754705, 42.13876052456928]);
+    let result = nodesAreEqual(a, b);
+    assert.isTrue(result);
+
+    a = new Node([23.90328286754705, 42.13876052456928]);
+    b = new Node([23.90328286754706, 42.13876052456928]);
+    result = coordinatesAreEqual(a, b);
+    assert.isFalse(result);
+
+    a = new Node([23.90328286754706, 42.13876052456928]);
+    b = new Node([23.90328286754705, 42.13876052456928]);
+    result = coordinatesAreEqual(a, b);
+    assert.isFalse(result);
+
+    a = new Node([23.90328286754705, 42.13876052456929]);
+    b = new Node([23.90328286754705, 42.13876052456928]);
+    result = coordinatesAreEqual(a, b);
+    assert.isFalse(result);
+
+    a = new Node([23.90328286754705, 42.13876052456928]);
+    b = new Node([23.90328286754705, 42.13876052456929]);
+    result = coordinatesAreEqual(a, b);
+    assert.isFalse(result);
+
+    a = new Node([23.90328286754705, 42.13876052456929]);
+    b = new Node([23.90328286754706, 42.13876052456928]);
+    result = coordinatesAreEqual(a, b);
+    assert.isFalse(result);
+  });
+
+  it('Should check if point is on a line', () => {
     const segment = [[23.9246537794989, 42.131153928789807], [23.942764721830976, 42.133689460716298]];
     let point = [23.932304930671815, 42.134475863410451];
     assert.isFalse(isOnSegment(segment, point));
@@ -42,6 +97,25 @@ describe('Helpers tests', () => {
     assert.isTrue(isOnSegment(segment, point));
     point = [23.9246537794989, 42.131153928789807];
     assert.isTrue(isOnSegment(segment, point));
+  });
+
+  it('Should calculate length of a line', () => {
+    let line = [
+      [23.900385116773919, 42.120830691660522],
+      [23.903282867547048, 42.138760524569278],
+      [23.913424995253013, 42.150894855931774],
+      [23.930630390468483, 42.146729339195396]
+    ];
+    let length = getLength(line);
+    assert.isTrue(Math.abs(length - 0.0516796474890469) < Number.EPSILON);
+
+    line = [[23.990385361315976, 42.18143922833228], [23.952725740113618, 42.167194704030642]];
+    length = getLength(line);
+    assert.isTrue(Math.abs(length - 0.0402635510317346) < Number.EPSILON);
+
+    line = [[23.959789007623126, 42.143288260152296], [23.942764721830976, 42.133689460716298], [23.9246537794989, 42.131153928789807]];
+    length = getLength(line);
+    assert.isTrue(Math.abs(length - 0.037831448603633) < Number.EPSILON);
   });
 
   it('Should split line at coordinates', () => {
