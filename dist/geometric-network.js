@@ -1,5 +1,5 @@
 /** 
- * geometric-network - v1.1.0
+ * geometric-network - v1.2.0
  * description: Library for creating and managing geometric networks
  * author: bojko108 <bojko108@gmail.com>
  * 

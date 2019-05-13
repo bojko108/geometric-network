@@ -1,18 +1,6 @@
-# v2.0!
-
-- [] Update connected edges (what about leaf edges?)
-- [] Remove edges
-- [] Test events
-- [] Update docs
-
-# 3.0!
-
-- [] Implement topology check
-  - [] Define rules like: must not have dangles, end must be covered by node...
-
 # Geometric Network
 
-Library for creating and managing geometric networks. This library can be usd for managing features participating in a network. All upates to the geometry of the features inside the network are managed internaly and the connectivity between the elements is checked. You can add/remove/update/split elements using the appropriate methods.
+Library for creating and managing geometric networks. This library can be usd for managing features participating in a network. All upates to the geometry of the features inside the network are managed internaly and the connectivity between the elements is checked. You can `add, remove, update, split` elements using the appropriate methods.
 
 ## Install
 
@@ -30,7 +18,7 @@ network.addEdge(coordinates); // add a single edge to the network
 
 ## Network events
 
-The network emits some events that can be used for keeping track of any changes made to it. Fllowing events are emitted:
+The network emits some events that can be used for keeping track of any changes made to it. Following events are emitted:
 
 - `ADD_EDGE`
 - `REMOVE_EDGE`
@@ -99,7 +87,18 @@ network.addFromGeoJSON(json);
 
 ```js
 const network = new Network();
+
 network.addEdge([
+  /* coordinates */
+]);
+```
+
+### Adding a node
+
+```js
+const network = new Network();
+
+network.addNode([
   /* coordinates */
 ]);
 ```
