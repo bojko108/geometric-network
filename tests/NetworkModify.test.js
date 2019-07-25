@@ -1,10 +1,6 @@
 import { assert } from 'chai';
 import data from './data/data.json';
-import alabak from './data/alabak.json';
 import Network from '../src/Network/Network';
-import Edge from '../src/Network/Edge';
-import Node from '../src/Network/Node';
-import * as events from '../src/Events/Events';
 
 describe('Network Modifications tests', () => {
   let network;
@@ -12,11 +8,10 @@ describe('Network Modifications tests', () => {
   beforeEach(() => {
     network = new Network();
     assert.isDefined(network);
+    assert.equal(network.all().length, 0);
   });
 
   it('Should add a new edge', () => {
-    assert.equal(network.all().length, 0);
-
     network.addEdge(data.features[0].geometry.coordinates);
     assert.equal(network.all().length, 3);
     assert.equal(network.all('edge').length, 1);
@@ -29,8 +24,6 @@ describe('Network Modifications tests', () => {
   });
 
   it('Should remove an edge', () => {
-    assert.equal(network.all().length, 0);
-
     data.features.forEach(f => {
       network.addEdge(f.geometry.coordinates);
     });
@@ -57,7 +50,6 @@ describe('Network Modifications tests', () => {
   });
 
   it('Should add a new edge with start at existing node', () => {
-    assert.equal(network.all().length, 0);
     const coordinates = [...data.features[2].geometry.coordinates];
     coordinates[0] = [23.990385361315976, 42.18143922833228];
 
@@ -82,7 +74,6 @@ describe('Network Modifications tests', () => {
   });
 
   it('Should add a new edge with end at existing node', () => {
-    assert.equal(network.all().length, 0);
     const coordinates = [...data.features[2].geometry.coordinates];
     coordinates[coordinates.length - 1] = [23.900385116773919, 42.120830691660522];
 
@@ -104,7 +95,6 @@ describe('Network Modifications tests', () => {
   });
 
   it('Should add a new edge and split existing edge at start node', () => {
-    assert.equal(network.all().length, 0);
     const coordinates = [...data.features[2].geometry.coordinates];
     coordinates[0] = [23.972796923846, 42.174786508074];
 
@@ -132,7 +122,6 @@ describe('Network Modifications tests', () => {
   });
 
   it('Should add a new edge and split existing edge at end node', () => {
-    assert.equal(network.all().length, 0);
     const coordinates = [...data.features[2].geometry.coordinates];
     coordinates[coordinates.length - 1] = [23.907648420288, 42.143983596599];
 
@@ -160,7 +149,6 @@ describe('Network Modifications tests', () => {
   });
 
   it('Should split two edges at intersection point', () => {
-    assert.equal(network.all().length, 0);
     const coordinates1 = [[0, 0], [5, 5]];
     const coordinates2 = [[0, 5], [5, 0]];
 
@@ -194,22 +182,9 @@ describe('Network Modifications tests', () => {
     assert.deepEqual(edge4.end.adjacent, [edge3.start.id]);
     assert.deepEqual(edge5.end.adjacent, [edge3.start.id]);
     assert.deepEqual(edge3.start.adjacent, [edge1.start.id, edge3.end.id, edge2.start.id, edge4.end.id, edge5.end.id]);
-    debugger;
-    let node = network.getNodeById(6);
-    network.updateNode(5, [4, 2.5]);
-
-    let a = JSON.stringify(network.toGeoJSON('asd'));
-
-    // network.removeEdgeById(5);
-
-    // assert.equal(network.all().length, 9);
-    // assert.equal(network.all('edge').length, 4);
-    // assert.equal(network.all('node').length, 5);
-    // assert.deepEqual(edge3.start.adjacent, [edge1.start.id, edge3.end.id, edge2.start.id, edge4.end.id]);
   });
 
   it('Should update a node and all connected edges', () => {
-    assert.equal(network.all().length, 0);
     const coordinates1 = [[0, 0], [5, 5]];
     const coordinates2 = [[0, 5], [5, 0]];
 
@@ -255,15 +230,76 @@ describe('Network Modifications tests', () => {
     assert.deepEqual(edge2.coordinates[edge2.vertexCount - 1], edge5.start.coordinates);
     assert.deepEqual(edge3.coordinates[0], edge5.start.coordinates);
     assert.deepEqual(edge4.coordinates[0], edge5.start.coordinates);
+  });
 
-    let a = JSON.stringify(network.toGeoJSON('asd'));
+  it('Should update edge vertices', () => {
+    network.addEdge(data.features[0].geometry.coordinates);
+    network.addEdge(data.features[1].geometry.coordinates);
+    network.addEdge(data.features[2].geometry.coordinates);
+    network.addEdge(data.features[3].geometry.coordinates);
+    network.addEdge(data.features[4].geometry.coordinates);
+    assert.equal(network.all().length, 12);
+    assert.equal(network.all('edge').length, 5);
+    assert.equal(network.all('node').length, 7);
 
-    // network.removeEdgeById(5);
+    const edge5 = network.getEdgeById(5);
+    assert.isDefined(edge5);
 
-    // assert.equal(network.all().length, 9);
-    // assert.equal(network.all('edge').length, 4);
-    // assert.equal(network.all('node').length, 5);
-    // assert.deepEqual(edge3.start.adjacent, [edge1.start.id, edge3.end.id, edge2.start.id, edge4.end.id]);
+    // update edge5 coordinates by adding new vertices
+    let newCoordinates = [...edge5.coordinates];
+    newCoordinates.splice(1, 0, [23.98, 42.17]);
+    newCoordinates.splice(1, 0, [23.96, 42.18]);
+    network.updateEdgeCoordinates(edge5.id, newCoordinates);
+
+    assert.equal(network.all().length, 12);
+    assert.equal(network.all('edge').length, 5);
+    assert.equal(network.all('node').length, 7);
+  });
+
+  it('Should throw error when updating start node for an edge', () => {
+    network.addEdge(data.features[0].geometry.coordinates);
+
+    assert.equal(network.all().length, 3);
+    assert.equal(network.all('edge').length, 1);
+    assert.equal(network.all('node').length, 2);
+
+    const edge1 = network.getEdgeById(1);
+    assert.isDefined(edge1);
+
+    // try to update edge1 start node using updateEdgeCoordinates
+    let newCoordinates = [...edge1.coordinates];
+    newCoordinates[0] = [23.98, 42.17];
+
+    const errorMessage = `This method is designed to update coordinates of an edge except start/end nodes. To update the start node of this edge you must call: updateNode(${
+      edge1.start.id
+    }, [${newCoordinates[0]}])`;
+
+    assert.throws(function() {
+      network.updateEdgeCoordinates(edge1.id, newCoordinates);
+    }, errorMessage);
+  });
+
+  it('Should throw error when updating end node for an edge', () => {
+    network.addEdge(data.features[0].geometry.coordinates);
+
+    assert.equal(network.all().length, 3);
+    assert.equal(network.all('edge').length, 1);
+    assert.equal(network.all('node').length, 2);
+
+    const edge1 = network.getEdgeById(1);
+    assert.isDefined(edge1);
+
+    // try to update edge1 end node using updateEdgeCoordinates
+    let newCoordinates = [...edge1.coordinates];
+    newCoordinates[newCoordinates.length - 1] = [23.98, 42.17];
+
+    const errorMessage = `This method is designed to update coordinates of an edge except start/end nodes. To update the end node of this edge you must call: updateNode(${
+      edge1.end.id
+    }, [${newCoordinates[newCoordinates.length - 1]}])`;
+
+    assert.throws(function() {
+      network.updateEdgeCoordinates(edge1.id, newCoordinates);
+    }, errorMessage);
   });
 
   it('Should update all edges when start node is moved', () => {
