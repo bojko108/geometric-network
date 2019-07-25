@@ -1,5 +1,5 @@
 /** 
- * geometric-network - v1.2.0
+ * geometric-network - v1.3.0
  * description: Library for creating and managing geometric networks
  * author: bojko108 <bojko108@gmail.com>
  * 
@@ -569,9 +569,7 @@ const toGeoJSON = (name = 'Network', elements) => {
 const coordinatesAreEqual = (a, b) => {
   return Math.abs(a[0] - b[0]) < Number.EPSILON && Math.abs(a[1] - b[1]) < Number.EPSILON;
 };
-const nodesAreEqual = (a, b) => {
-  return Math.abs(a.x - b.x) < Number.EPSILON && Math.abs(a.y - b.y) < Number.EPSILON;
-};
+
 const squaredDistance = (p1, p2) => {
   const dy = p2[0] - p1[0];
   const dx = p2[1] - p1[1];
@@ -988,6 +986,28 @@ class Network {
     this.events.emit(UPDATE_NODE, node, oldCoordinates);
     return node;
   }
+  updateEdgeCoordinates(id, newCoordinates) {
+    const edge = this.getEdgeById(id);
+    if (!edge) {
+      throw `InvalidArgument: edge with ID: ${id} was not found in the network`;
+    }
+    if (edge.start.x !== newCoordinates[0][0] && edge.start.y !== newCoordinates[0][1]) {
+      throw `This method is designed to update coordinates of an edge except start/end nodes. To update the start node of this edge you must call: updateNode(${
+        edge.start.id
+      }, [${newCoordinates[0]}])`;
+    }
+    if (edge.end.x !== newCoordinates[newCoordinates.length - 1][0] && edge.end.y !== newCoordinates[newCoordinates.length - 1][1]) {
+      throw `This method is designed to update coordinates of an edge except start/end nodes. To update the end node of this edge you must call: updateNode(${
+        edge.end.id
+      }, [${newCoordinates[newCoordinates.length - 1]}])`;
+    }
+    const oldCoordinates = [...edge.coordinates];
+    this._elementsTree.remove(edge);
+    edge.setCoordinates(newCoordinates);
+    this._elementsTree.insert(edge);
+    this.events.emit(UPDATE_EDGE, edge, oldCoordinates);
+    return edge;
+  }
   _onUpdateNode(node, oldCoordinates) {
     const edges = this.findEdgesAt(oldCoordinates);
     for (let i = 0; i < edges.length; i++) {
@@ -1041,127 +1061,7 @@ class Network {
       edge.end.removeAdjacent(other.start);
     }
   }
-  updateEdge(id, newCoordinates) {
-    const edge = this.getEdgeById(id);
-    if (!edge) {
-      throw `InvalidArgument: edge with ID: ${id} was not found in the network`;
-    }
-    const oldCoordinates = [...edge.coordinates];
-    this._elementsTree.remove(edge);
-    edge.setCoordinates(newCoordinates);
-    this._elementsTree.insert(edge);
-    this.events.emit(UPDATE_EDGE, edge, oldCoordinates);
-    return edge;
-  }
   removeOrphanNodes() {}
-  updateEdgeOld(id, coordinates, startNode, endNode) {
-    const oldEdge = this.getEdgeById(id);
-    if (!oldEdge) {
-      throw `InvalidArgument: edge with ID: ${id} was not found in the network`;
-    }
-    let edgeStartNode = startNode || this.findNodesAt(coordinates[0])[0],
-      edgeEndNode = endNode || this.findNodesAt(coordinates[coordinates.length - 1])[0];
-    if (!edgeStartNode) {
-      edgeStartNode = oldEdge.start.clone();
-      edgeStartNode.setCoordinates(coordinates[0]);
-    }
-    if (!edgeEndNode) {
-      edgeEndNode = oldEdge.end.clone();
-      edgeEndNode.setCoordinates(coordinates[coordinates.length - 1]);
-    }
-    const updEdge = oldEdge.clone();
-    this._elementsTree.remove(oldEdge);
-    updEdge.setCoordinates(coordinates, edgeStartNode, edgeEndNode);
-    this._elementsTree.insert(updEdge);
-    this._processEdge(updEdge, oldEdge);
-    this.events.emit(UPDATE_EDGE, oldEdge, updEdge);
-    return updEdge;
-  }
-  _tryToSplitEdge(edge, splitPoint) {
-    const splitResult = split(edge.coordinates, splitPoint);
-    return splitResult;
-  }
-  _processEdge(edge, oldEdge) {
-    const edgesOnStart = this.findEdgesAt(edge.start).filter(e => e.id !== edge.id);
-    edgesOnStart.map(edgeOnStart => {
-      const splitResult = this._tryToSplitEdge(edgeOnStart, edge.start.coordinates);
-      if (splitResult) {
-        this.disconnectEdge(edgeOnStart);
-        let splitNode = this.findNodeAt(splitResult.secondCoordinates[0]);
-        if (!splitNode) {
-          splitNode = this.addNode(splitResult.secondCoordinates[0]);
-          this._elementsTree.insert(splitNode);
-        }
-        const updEdge = edgeOnStart.clone();
-        this._elementsTree.remove(edgeOnStart);
-        updEdge.setCoordinates(splitResult.firstCoordinates, edgeOnStart.start, splitNode);
-        this._elementsTree.insert(updEdge);
-        this.connectEdge(updEdge);
-        this.events.emit(UPDATE_EDGE, edgeOnStart, updEdge);
-        const newEdge = this.addEdge(splitResult.secondCoordinates, splitNode, edgeOnStart.start);
-        this.events.emit(SPLIT_EDGE, edgeOnStart, newEdge);
-      }
-    });
-    const edgesOnEnd = this.findEdgesAt(edge.end).filter(e => e.id !== edge.id);
-    edgesOnEnd.map(edgeOnEnd => {
-      const splitResult = this._tryToSplitEdge(edgeOnEnd, edge.end.coordinates);
-      if (splitResult) {
-        this.disconnectEdge(edgeOnEnd);
-        let splitNode = this.findNodeAt(splitResult.secondCoordinates[0]);
-        if (!splitNode) {
-          splitNode = this.addNode(splitResult.secondCoordinates[0]);
-          this._elementsTree.insert(splitNode);
-        }
-        const updEdge = edgeOnEnd.clone();
-        this._elementsTree.remove(edgeOnEnd);
-        updEdge.setCoordinates(splitResult.firstCoordinates, edgeOnEnd.start, splitNode);
-        this._elementsTree.insert(updEdge);
-        this.connectEdge(updEdge);
-        edgeOnEnd.end.removeAdjacent(updEdge.start);
-        updEdge.end.addAdjacent(edgeOnEnd.end);
-        this.events.emit(UPDATE_EDGE, edgeOnEnd, updEdge);
-        const newEdge = this.addEdge(splitResult.secondCoordinates, splitNode, edgeOnEnd.end);
-        this.events.emit(SPLIT_EDGE, edgeOnEnd, newEdge);
-      }
-    });
-    this.connectEdge(edge);
-    if (oldEdge) {
-      const oldEdgeEdgesOnStart = this.findEdgesAt(oldEdge.start).filter(e => e.id !== oldEdge.id);
-      oldEdgeEdgesOnStart.map(oldEdgeEdgeOnStart => {
-        if (nodesAreEqual(oldEdgeEdgeOnStart.start, oldEdge.start)) {
-          if (nodesAreEqual(oldEdgeEdgeOnStart.start, edge.start) === false) {
-            let coordinates = oldEdgeEdgeOnStart.coordinates;
-            coordinates[0] = edge.start.coordinates;
-            this.updateEdge(oldEdgeEdgeOnStart.id, coordinates, edge.start, oldEdgeEdgeOnStart.end);
-          }
-        }
-        if (nodesAreEqual(oldEdgeEdgeOnStart.end, oldEdge.start)) {
-          if (nodesAreEqual(oldEdgeEdgeOnStart.end, edge.start) === false) {
-            let coordinates = oldEdgeEdgeOnStart.coordinates;
-            coordinates[oldEdgeEdgeOnStart.vertexCount - 1] = edge.start.coordinates;
-            this.updateEdge(oldEdgeEdgeOnStart.id, coordinates, oldEdgeEdgeOnStart.start, edge.start);
-          }
-        }
-      });
-      const oldEdgeEdgesOnEnd = this.findEdgesAt(oldEdge.end).filter(e => e.id !== oldEdge.id);
-      oldEdgeEdgesOnEnd.map(oldEdgeEdgeOnEnd => {
-        if (nodesAreEqual(oldEdgeEdgeOnEnd.start, oldEdge.end)) {
-          if (nodesAreEqual(oldEdgeEdgeOnEnd.start, edge.end) === false) {
-            let coordinates = oldEdgeEdgeOnEnd.coordinates;
-            coordinates[0] = edge.end.coordinates;
-            this.updateEdge(oldEdgeEdgeOnEnd.id, coordinates, edge.end, oldEdgeEdgeOnEnd.end);
-          }
-        }
-        if (nodesAreEqual(oldEdgeEdgeOnEnd.end, oldEdge.end)) {
-          if (nodesAreEqual(oldEdgeEdgeOnEnd.end, edge.end) === false) {
-            let coordinates = oldEdgeEdgeOnEnd.coordinates;
-            coordinates[oldEdgeEdgeOnEnd.vertexCount - 1] = edge.end.coordinates;
-            this.updateEdge(oldEdgeEdgeOnEnd.id, coordinates, oldEdgeEdgeOnEnd.start, edge.end);
-          }
-        }
-      });
-    }
-  }
 }
 
 exports.events = Events;
