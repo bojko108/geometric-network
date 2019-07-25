@@ -103,6 +103,18 @@ network.addNode([
 ]);
 ```
 
+## Test
+
+Use `yarn test` to run all tests. You can also view the network in QGIS by adding:
+
+```js
+const json = network.toGeoJSON('network');
+let networkAsJsonText = JSON.stringify(json);
+debugger;
+```
+
+Run the debugger and copy `networkAsJsonText` value to `test/qgis/test.geojson` then open `test/qgis/test.qgs` in QGIS.
+
 ## Dependencies
 
 - [rbush](https://github.com/bojko108/rbush) - forked from [mourner/rbush](https://github.com/mourner/rbush)
